@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Logs</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+  <%- include('partials/navbar' ) %>
+  <div class="container" id="daily-logs">
+    <h1>Daily Logs Report</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>Daily Log ID</th>
+          <th>Log Date</th>
+          <th>Project Name</th>
+          <th>Staff Names</th>
+          <th>Status</th>
+          <th>Reimbursed</th>
+          <th>Hours</th>
+          <th>PDF</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% dailyLogs.forEach(function(log) { %>
+        <tr>
+          <td><%= log.daily_log_id %></td>
+          <td><%= log.log_date %></td>
+          <td><%= log.project_name %></td>
+          <td>
+            <% log.staff_names.split(', ').forEach(function(name) { %>
+            <span class="staff-name"><%= name %></span>
+            <% }); %>
+          </td>
+          <td>
+            <%= log.status === 0 ? 'not-filled' : log.status === 1 ? 'filled'
+              : 'to-contractor' %>
+          </td>
+          <td>
+            <%= log.reimbursed === 0 ? 'not-reimbursed' : log.reimbursed === 1
+              ? 'received-money' : 'reimbursed' %>
+          </td>
+          <td><%= log.hours %></td>
+          <td><a href="<%= log.pdf_url %>" target="_blank">PDF</a></td>
+
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</body>
+
+</html>

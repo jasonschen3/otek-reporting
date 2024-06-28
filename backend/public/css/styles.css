@@ -42,7 +42,10 @@ th {
 
 /* staff name */
 .staff-name {
-  display: block;
+  display: block; /* Ensure each name takes its own line */
+  white-space: nowrap; /* Prevent names from breaking in the middle */
+  overflow: hidden; /* Hide overflow text */
+  text-overflow: ellipsis; /* Add ellipsis for overflow text */
 }
 
 .hidden {
@@ -117,4 +120,12 @@ nav a:hover {
 
 .reg-login .btn {
   width: 250px;
+}
+
+#statusForm {
+  width: 150px;
+}
+
+#statusForm button {
+  color: white;
 }

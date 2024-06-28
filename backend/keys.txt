@@ -1,3 +1,6 @@
+Projects:
+- project_status: 0 1, finished ongoing
+
 Daily logs:
 - status: 0 1 2 , not-filled filled to-contractor
 - reimbursed: 0 1 2 , not-reimbursed received-money reimbursed
