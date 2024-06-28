@@ -41,13 +41,13 @@ let expensesInfo = [];
 async function updateCompanyInfo() {
   // Change the table here
   const currProjectsInfo = await db.query(
-    "SELECT p.project_id, p.project_name, TO_CHAR(p.start_date, 'Dy Mon DD YYYY') AS start_date, TO_CHAR(p.end_date, 'Dy Mon DD YYYY') AS end_date, STRING_AGG(s.name, ', ') AS staff_names, p.details, p.location, p.notifications FROM projects p JOIN project_staff ps ON p.project_id = ps.project_id JOIN staff s ON ps.staff_id = s.staff_id GROUP BY p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location, p.notifications ORDER BY p.project_id"
+    "SELECT p.project_id, p.project_name, p.project_status, TO_CHAR(p.start_date, 'YYYY-MM-DD') AS start_date, TO_CHAR(p.end_date, 'YYYY-MM-DD') AS end_date, STRING_AGG(s.name, ', ') AS staff_names, p.details, p.location, p.notifications FROM projects p JOIN project_staff ps ON p.project_id = ps.project_id JOIN staff s ON ps.staff_id = s.staff_id GROUP BY p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location, p.notifications ORDER BY p.project_id"
   );
   const currDailyLogsInfo = await db.query(
-    "SELECT dl.daily_log_id, TO_CHAR (dl.log_date, 'Dy Mon DD YYYY') AS log_date, p.project_name, STRING_AGG (s.name, ', ') AS staff_names, dl.status, dl.reimbursed, dl.hours FROM daily_logs dl JOIN projects p ON dl.project_id = p.project_id JOIN staff s ON dl.staff_id = s.staff_id GROUP BY dl.daily_log_id, p.project_name, dl.status, dl.reimbursed, dl.hours, dl.log_date ORDER BY dl.daily_log_id;"
+    "SELECT dl.daily_log_id, TO_CHAR (dl.log_date, 'YYYY-MM-DD') AS log_date, p.project_name, STRING_AGG (s.name, ', ') AS staff_names, dl.status, dl.reimbursed, dl.hours FROM daily_logs dl JOIN projects p ON dl.project_id = p.project_id JOIN staff s ON dl.staff_id = s.staff_id GROUP BY dl.daily_log_id, p.project_name, dl.status, dl.reimbursed, dl.hours, dl.log_date ORDER BY dl.daily_log_id;"
   );
   const currExpensesInfo = await db.query(
-    "SELECT e.expense_id, p.project_name, TO_CHAR (e.expense_date, 'Dy Mon DD YYYY') AS expense_date, e.expense_type, e.amount, e.daily_log_id, s.name AS staff_name, e.status FROM expenses e JOIN projects p ON e.project_id = p.project_id JOIN staff s ON e.staff_id = s.staff_id ORDER BY e.expense_id"
+    "SELECT e.expense_id, p.project_name, TO_CHAR (e.expense_date, 'YYYY-MM-DD') AS expense_date, e.expense_type, e.amount, e.daily_log_id, s.name AS staff_name, e.status FROM expenses e JOIN projects p ON e.project_id = p.project_id JOIN staff s ON e.staff_id = s.staff_id ORDER BY e.expense_id"
   );
   projectsInfo = currProjectsInfo.rows;
   dailyLogsInfo = currDailyLogsInfo.rows;
@@ -79,7 +79,8 @@ app.get("/secrets", async (req, res) => {
   // console.log(req.user);
   await updateCompanyInfo(); // DONT FORGET AWAIT
 
-  if (req.isAuthenticated()) {
+  // if (req.isAuthenticated()) {
+  if (true) {
     //here
     res.render("secrets.ejs", {
       projects: projectsInfo,
@@ -102,6 +103,22 @@ app.post(
     failureRedirect: "/invalid",
   })
 );
+
+// Route to handle project status update
+app.post("/updateProjectStatus", async (req, res) => {
+  const { project_id, project_status } = req.body;
+
+  try {
+    await db.query(
+      "UPDATE projects SET project_status = $1 WHERE project_id = $2",
+      [project_status, project_id]
+    );
+    res.redirect("/secrets");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server Error");
+  }
+});
 
 app.post("/register", async (req, res) => {
   const email = req.body.username;

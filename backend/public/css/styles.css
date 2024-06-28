@@ -22,6 +22,7 @@ table {
   border-collapse: collapse;
   margin-bottom: 20px;
 }
+
 table,
 th,
 td {
@@ -37,6 +38,31 @@ th {
   /* background-color: #004d40; */
   background-color: var(--color2);
   color: white;
+}
+
+/* staff name */
+.staff-name {
+  display: block;
+}
+
+.hidden {
+  display: none;
+}
+
+.daily-log-buttons,
+.expense-buttons {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+button {
+  background-color: transparent;
+  padding: 8px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #ddd;
 }
 
 /* tr:nth-child(even) { optional if want every other col to alternate
