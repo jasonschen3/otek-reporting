@@ -1,24 +1,32 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import axios from "axios";
 
 function Projects() {
   const [projects, setProjects] = useState([]);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    // Fetch the projects data from the server
-    axios
-      .get("http://localhost:3000/projects")
-      .then((res) => {
-        console.log("projects data: ", res.data);
-        setProjects(res.data);
-      })
-      .catch((error) => {
-        console.error("There was an error fetching the projects data!", error);
-      });
-  }, []);
+    if (location.state?.isAuthenticated) {
+      axios
+        .get("http://localhost:3000/projects")
+        .then((res) => {
+          console.log("projects data: ", res.data);
+          setProjects(res.data);
+        })
+        .catch((error) => {
+          console.error(
+            "There was an error fetching the projects data!",
+            error
+          );
+        });
+    } else {
+      console.log("User is not authenticated.");
+      navigate("/");
+    }
+  }, [location.state, navigate]);
 
   async function handleUpdateProjectDisplay(event) {
     event.preventDefault();
@@ -55,7 +63,6 @@ function Projects() {
     navigate("/expenses", { state: { project, action } });
   }
 
-  // ADD ON CLICK FOR EXPENSES AND DAILY LOG
   return (
     <div className="container mt-5">
       <h1>Projects Report</h1>

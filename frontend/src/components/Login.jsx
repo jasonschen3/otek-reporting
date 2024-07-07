@@ -18,7 +18,7 @@ function Login() {
       })
       .then((res) => {
         if (res.status === 200) {
-          navigate("/projects");
+          navigate("/projects", { state: { isAuthenticated: true } });
         } else {
           console.log("Wrong credentials");
           setMessage("Wrong credentials");

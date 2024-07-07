@@ -1,7 +1,7 @@
 import React, { useState } from "react";
+import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
 import Login from "./components/Login";
-// import "bootstrap/dist/css/bootstrap.min.css"; this can be used if the index.html one isn't used
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Register from "./components/Register";
 import Projects from "./components/Projects";

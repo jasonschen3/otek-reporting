@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
-import "bootstrap/dist/css/bootstrap.min.css";
 
 const DailyLogs = () => {
   const [dailyLogs, setDailyLogs] = useState([]);
@@ -29,20 +28,6 @@ const DailyLogs = () => {
 
   return (
     <div className="container mt-5" id="daily-logs">
-      <nav className="navbar navbar-light bg-light">
-        <a className="navbar-brand" href="#">
-          <img
-            src="/images/otek-transparent.png"
-            width="30"
-            height="30"
-            className="d-inline-block align-top"
-            alt=""
-          />
-        </a>
-        <a className="btn btn-light btn-lg" href="/logout" role="button">
-          Log Out
-        </a>
-      </nav>
       <h1>Daily Logs Report</h1>
       <table className="table mt-3">
         <thead>
