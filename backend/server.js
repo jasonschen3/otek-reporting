@@ -3,15 +3,22 @@ import bodyParser from "body-parser";
 import pg from "pg";
 import bcrypt from "bcrypt";
 import passport from "passport";
-import { Strategy } from "passport-local";
+import LocalStrategy from "passport-local";
 import session from "express-session";
 import env from "dotenv";
 
-const app = express();
+import cors from "cors"; // NEEDS TO CONNECT
+
 const port = 3000;
 const saltRounds = 10;
 
 env.config();
+
+const app = express();
+app.use(cors());
+app.use(express.static("public"));
+app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(
   session({
@@ -20,8 +27,6 @@ app.use(
     saveUninitialized: true,
   })
 );
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static("public"));
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -73,18 +78,6 @@ const getFormattedDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-app.get("/", (req, res) => {
-  res.render("home.ejs");
-});
-
-app.get("/login", (req, res) => {
-  res.render("login.ejs");
-});
-
-app.get("/register", (req, res) => {
-  res.render("register.ejs");
-});
-
 app.get("/logout", (req, res) => {
   req.logout(function (err) {
     if (err) {
@@ -95,42 +88,19 @@ app.get("/logout", (req, res) => {
 });
 
 app.get("/projects", async (req, res) => {
-  // console.log(req.user);
-  await updateCompanyInfo(); // DONT FORGET AWAIT
+  // if (!req.isAuthenticated()) {
+  //   console.log("Not authorized");
+  //   return res.status(401).json({ message: "Not authorized" });
+  // }
 
-  if (req.isAuthenticated()) {
-    // if (true) {
-    //here
-    res.render("projects.ejs", {
-      projects: projectsInfo,
-    });
-  } else {
-    res.send("Not authorised");
+  try {
+    await updateCompanyInfo(); // Perform the asynchronous operation
+    res.json(projectsInfo);
+  } catch (error) {
+    console.error("Error updating company info:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
-
-// app.get("/dailyLogs", async (req, res) => {
-//   const currDailyLogsInfo = await db.query(
-//     "SELECT dl.daily_log_id, TO_CHAR (dl.log_date, 'YYYY-MM-DD') AS log_date, p.project_name, STRING_AGG (s.name, ', ') AS staff_names, dl.status, dl.reimbursed, dl.hours, dl.pdf_url FROM daily_logs dl JOIN projects p ON dl.project_id = p.project_id JOIN staff s ON dl.staff_id = s.staff_id WHERE dl.project_id = p.project_id GROUP BY dl.daily_log_id, p.project_name, dl.status, dl.reimbursed, dl.hours, dl.log_date ORDER BY dl.daily_log_id;"
-//   );
-
-//   dailyLogsInfo = currDailyLogsInfo.rows;
-//   res.render("daily-logs.ejs", {
-//     dailyLogs: dailyLogsInfo,
-//   });
-// });
-
-app.get("/invalid", async (req, res) => {
-  res.send("Invalid login");
-});
-
-app.post(
-  "/login",
-  passport.authenticate("local", {
-    successRedirect: "/projects",
-    failureRedirect: "/invalid",
-  })
-);
 
 // Handle click daily logs
 app.post("/dailyLogs", async (req, res) => {
@@ -167,9 +137,7 @@ app.post("/dailyLogs", async (req, res) => {
   }
 
   dailyLogsInfo = currDailyLogsInfo.rows;
-  res.render("daily-logs.ejs", {
-    dailyLogs: dailyLogsInfo,
-  });
+  res.json(dailyLogsInfo);
 });
 
 app.post("/expenses", async (req, res) => {
@@ -205,28 +173,32 @@ app.post("/expenses", async (req, res) => {
   }
 
   expensesInfo = currExpensesInfo.rows;
-  res.render("expenses.ejs", {
-    expenses: expensesInfo,
-  });
+  res.json(expensesInfo);
 });
-// Route to handle project status update
-app.post("/updateProjectStatus", async (req, res) => {
-  const { project_id, project_status } = req.body;
 
-  try {
-    await db.query(
-      "UPDATE projects SET project_status = $1 WHERE project_id = $2",
-      [project_status, project_id]
-    );
-    res.redirect("/projects");
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Server Error");
+app.post("/updateProjectDisplay", async (req, res) => {
+  console.log("Update posted");
+  const { ongoing, completed } = req.body;
+
+  console.log("Ongoing:", ongoing);
+  console.log("Completed:", completed);
+
+  if (ongoing && completed) {
+    projectDisplayStatus = 3; // display all
+  } else if (ongoing) {
+    projectDisplayStatus = 1; // display ongoing
+  } else if (completed) {
+    projectDisplayStatus = 2; // display completed
+  } else {
+    projectDisplayStatus = 0; // display none
   }
+
+  res.redirect("/projects");
 });
 
 // Toggle what to display based on status
 app.post("/updateProjectDisplay", async (req, res) => {
+  console.log("Update posted");
   const ongoing = req.body.ongoing;
   const completed = req.body.completed;
   if (ongoing && completed) {
@@ -247,73 +219,95 @@ app.post("/register", async (req, res) => {
   const password = req.body.password;
 
   try {
-    // Check if alr exists
+    // Check if the email already exists
     const checkResult = await db.query("SELECT * FROM users WHERE email = $1", [
       email,
     ]);
-
+    console.log(checkResult.rows);
     if (checkResult.rows.length > 0) {
-      res.send("Email already exists");
+      return res.status(409).json({ message: "Email already exists" }); // 409 Conflict
     } else {
       bcrypt.hash(password, saltRounds, async (err, hash) => {
         if (err) {
           console.error("Error hashing password:", err);
+          return res.status(500).json({ message: "Error hashing password" });
         } else {
           const result = await db.query(
             "INSERT INTO users (email, password) VALUES ($1, $2) RETURNING *",
             [email, hash]
           );
           const user = result.rows[0];
+          // console.log(result.rows);
           req.login(user, (err) => {
+            if (err) {
+              console.error("Error logging in user:", err);
+              return res.status(500).json({ message: "Error logging in user" });
+            }
             console.log("success");
-            res.redirect("/login");
+            return res.status(201).json({ message: "Registration successful" }); // 201 Created
           });
         }
       });
     }
   } catch (err) {
     console.log(err);
+    return res.status(500).json({ message: "Server error" });
   }
 });
 
+// Below is all login and passport
+// Login route
+app.post("/login", passport.authenticate("local"), (req, res) => {
+  res.status(200).json({ message: "Login successful" });
+});
+
+// Passport strategy
 passport.use(
-  new Strategy(async function verify(username, password, cb) {
-    try {
-      const result = await db.query("SELECT * FROM users WHERE email = $1 ", [
-        username,
-      ]);
-      if (result.rows.length > 0) {
-        const user = result.rows[0];
-        const storedHashedPassword = user.password;
-        bcrypt.compare(password, storedHashedPassword, (err, valid) => {
-          if (err) {
-            //Error with password check
-            console.error("Error comparing passwords:", err);
-            return cb(err);
-          } else {
-            if (valid) {
-              //Passed password check
-              return cb(null, user);
-            } else {
-              //Did not pass password check
-              return cb(null, false);
+  new LocalStrategy(
+    { usernameField: "username", passwordField: "password" },
+    async (username, password, done) => {
+      try {
+        const result = await db.query("SELECT * FROM users WHERE email = $1", [
+          username,
+        ]);
+        console.log("STRATEGY ", result);
+        if (result.rows.length > 0) {
+          const user = result.rows[0];
+          const storedHashedPassword = user.password;
+          bcrypt.compare(password, storedHashedPassword, (err, valid) => {
+            if (err) {
+              console.error("Error comparing passwords:", err);
+              return done(err);
             }
-          }
-        });
-      } else {
-        return cb("User not found");
+            if (valid) {
+              return done(null, user);
+            } else {
+              return done(null, false, { message: "Incorrect password" });
+            }
+          });
+        } else {
+          return done(null, false, { message: "User not found" });
+        }
+      } catch (err) {
+        console.log(err);
+        return done(err);
       }
-    } catch (err) {
-      console.log(err);
     }
-  })
+  )
 );
 
 passport.serializeUser((user, cb) => {
-  cb(null, user);
+  cb(null, user.id);
 });
-passport.deserializeUser((user, cb) => {
-  cb(null, user);
+
+passport.deserializeUser(async (id, cb) => {
+  try {
+    const result = await db.query("SELECT * FROM users WHERE id = $1", [id]);
+    const user = result.rows[0];
+    cb(null, user);
+  } catch (err) {
+    cb(err);
+  }
 });
 
 app.listen(port, () => {
