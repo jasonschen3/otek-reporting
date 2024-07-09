@@ -7,7 +7,7 @@ import LocalStrategy from "passport-local";
 import session from "express-session";
 import env from "dotenv";
 
-import cors from "cors"; // NEEDS TO CONNECT
+import cors from "cors";
 
 const port = 3000;
 const saltRounds = 10;
@@ -41,32 +41,72 @@ const db = new pg.Client({
 db.connect();
 
 let projectsInfo = []; // arr of json
-let dailyLogsInfo = [];
 let expensesInfo = [];
 let projectDisplayStatus = 1; // 0 1 2 3, display none, display ongoing, display completed, display all
 
 async function updateCompanyInfo() {
-  // Change the table here
-  // Projects query depends on project status
   let currProjectsInfo = null;
+
+  const query = `
+    SELECT 
+      p.project_id, 
+      p.project_name, 
+      p.project_status, 
+      TO_CHAR(p.start_date, 'YYYY-MM-DD') AS start_date, 
+      TO_CHAR(p.end_date, 'YYYY-MM-DD') AS end_date, 
+      COALESCE(STRING_AGG(e.name, ', '), '') AS engineer_names, 
+      p.details, 
+      p.location, 
+      p.notifications 
+    FROM 
+      projects p 
+    LEFT JOIN 
+      projects_assign_engineers pae ON p.project_id = pae.project_id 
+    LEFT JOIN 
+      engineers e ON pae.engineer_id = e.engineer_id 
+    WHERE 
+      p.project_status = $1 
+    GROUP BY 
+      p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location, p.notifications 
+    ORDER BY 
+      p.project_id;
+  `;
+
   if (projectDisplayStatus === 1) {
-    // ongoing
-    currProjectsInfo = await db.query(
-      "SELECT p.project_id, p.project_name, p.project_status, TO_CHAR(p.start_date, 'YYYY-MM-DD') AS start_date, TO_CHAR(p.end_date, 'YYYY-MM-DD') AS end_date, STRING_AGG(s.name, ', ') AS staff_names, p.details, p.location, p.notifications FROM projects p JOIN project_staff ps ON p.project_id = ps.project_id JOIN staff s ON ps.staff_id = s.staff_id WHERE p.project_status = 1 GROUP BY p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location, p.notifications ORDER BY p.project_id;"
-    );
+    // ongoing projects
+    currProjectsInfo = await db.query(query, [1]);
   } else if (projectDisplayStatus === 0) {
-    // none
-    currProjectsInfo = await db.query("");
+    // no projects (empty query)
+    currProjectsInfo = { rows: [] };
   } else if (projectDisplayStatus === 2) {
-    // finished only
-    currProjectsInfo = await db.query(
-      "SELECT p.project_id, p.project_name, p.project_status, TO_CHAR(p.start_date, 'YYYY-MM-DD') AS start_date, TO_CHAR(p.end_date, 'YYYY-MM-DD') AS end_date, STRING_AGG(s.name, ', ') AS staff_names, p.details, p.location, p.notifications FROM projects p JOIN project_staff ps ON p.project_id = ps.project_id JOIN staff s ON ps.staff_id = s.staff_id WHERE p.project_status = 0 GROUP BY p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location, p.notifications ORDER BY p.project_id;"
-    );
+    // finished projects
+    currProjectsInfo = await db.query(query, [0]);
   } else {
-    currProjectsInfo = await db.query(
-      "SELECT p.project_id, p.project_name, p.project_status, TO_CHAR (p.start_date, 'YYYY-MM-DD') AS start_date, TO_CHAR (p.end_date, 'YYYY-MM-DD') AS end_date, STRING_AGG (s.name, ', ') AS staff_names, p.details, p.location, p.notifications FROM projects p JOIN project_staff ps ON p.project_id = ps.project_id JOIN staff s ON ps.staff_id = s.staff_id GROUP BY p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location, p.notifications ORDER BY p.project_id;"
-    );
+    // all projects
+    currProjectsInfo = await db.query(`
+      SELECT 
+        p.project_id, 
+        p.project_name, 
+        p.project_status, 
+        TO_CHAR(p.start_date, 'YYYY-MM-DD') AS start_date, 
+        TO_CHAR(p.end_date, 'YYYY-MM-DD') AS end_date, 
+        COALESCE(STRING_AGG(e.name, ', '), '') AS engineer_names, 
+        p.details, 
+        p.location, 
+        p.notifications 
+      FROM 
+        projects p 
+      LEFT JOIN 
+        projects_assign_engineers pae ON p.project_id = pae.project_id 
+      LEFT JOIN 
+        engineers e ON pae.engineer_id = e.engineer_id 
+      GROUP BY 
+        p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location, p.notifications 
+      ORDER BY 
+        p.project_id;
+    `);
   }
+
   projectsInfo = currProjectsInfo.rows;
 }
 
@@ -87,14 +127,14 @@ app.get("/logout", (req, res) => {
   });
 });
 
-app.get("/projects", async (req, res) => {
-  // if (!req.isAuthenticated()) {
-  //   console.log("Not authorized");
-  //   return res.status(401).json({ message: "Not authorized" });
-  // }
+app.get("/", async (req, res) => {
+  res.send("Root of server");
+});
 
+app.get("/projects", async (req, res) => {
   try {
-    await updateCompanyInfo(); // Perform the asynchronous operation
+    await updateCompanyInfo();
+    console.log(projectsInfo);
     res.json(projectsInfo);
   } catch (error) {
     console.error("Error updating company info:", error);
@@ -102,10 +142,8 @@ app.get("/projects", async (req, res) => {
   }
 });
 
-// Handle click daily logs
 app.post("/dailyLogs", async (req, res) => {
   const projectId = req.body.project_id;
-
   const action = req.body.action;
   const today = new Date();
   const yesterday = new Date(today);
@@ -116,28 +154,54 @@ app.post("/dailyLogs", async (req, res) => {
 
   let currDailyLogsInfo = null;
 
-  // console.log(req.body.project_id);
+  const baseQuery = `
+    SELECT 
+      dl.daily_log_id, 
+      TO_CHAR(dl.log_date, 'YYYY-MM-DD') AS log_date, 
+      p.project_name, 
+      COALESCE(STRING_AGG(e.name, ', '), '[No engineers]') AS engineer_names, 
+      dl.status_submitted, 
+      dl.status_reimbursed, 
+      dl.hours, 
+      dl.pdf_url 
+    FROM 
+      daily_logs dl 
+    JOIN 
+      projects p ON dl.project_id = p.project_id 
+    LEFT JOIN 
+      engineers e ON dl.engineer_id = e.engineer_id 
+    WHERE 
+      dl.project_id = $1 `;
+
+  let query = "";
+  let params = [];
+
   if (action === "Yesterday") {
-    currDailyLogsInfo = await db.query(
-      `SELECT dl.daily_log_id, TO_CHAR(dl.log_date, 'YYYY-MM-DD') AS log_date, p.project_name, STRING_AGG(s.name, ', ') AS staff_names, dl.status, dl.reimbursed, dl.hours, dl.pdf_url FROM daily_logs dl JOIN projects p ON dl.project_id = p.project_id JOIN staff s ON dl.staff_id = s.staff_id WHERE dl.project_id = $1 AND log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status, dl.reimbursed, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`,
-      [projectId, formattedYesterday]
-    );
+    query =
+      baseQuery +
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.status_reimbursed, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`;
+    params = [projectId, formattedYesterday];
   } else if (action === "Today") {
-    currDailyLogsInfo = await db.query(
-      `SELECT dl.daily_log_id, TO_CHAR(dl.log_date, 'YYYY-MM-DD') AS log_date, p.project_name, STRING_AGG(s.name, ', ') AS staff_names, dl.status, dl.reimbursed, dl.hours, dl.pdf_url FROM daily_logs dl JOIN projects p ON dl.project_id = p.project_id JOIN staff s ON dl.staff_id = s.staff_id WHERE dl.project_id = $1 AND log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status, dl.reimbursed, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`,
-      [projectId, formattedToday]
-    );
+    query =
+      baseQuery +
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.status_reimbursed, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`;
+    params = [projectId, formattedToday];
   } else if (action === "View All") {
-    currDailyLogsInfo = await db.query(
-      `SELECT dl.daily_log_id, TO_CHAR(dl.log_date, 'YYYY-MM-DD') AS log_date, p.project_name, STRING_AGG(s.name, ', ') AS staff_names, dl.status, dl.reimbursed, dl.hours, dl.pdf_url FROM daily_logs dl JOIN projects p ON dl.project_id = p.project_id JOIN staff s ON dl.staff_id = s.staff_id WHERE dl.project_id = $1 GROUP BY dl.daily_log_id, p.project_name, dl.status, dl.reimbursed, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`,
-      [projectId]
-    );
+    query =
+      baseQuery +
+      `GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.status_reimbursed, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`;
+    params = [projectId];
   } else {
-    res.send("Unknown action");
+    return res.status(400).send("Unknown action");
   }
 
-  dailyLogsInfo = currDailyLogsInfo.rows;
-  res.json(dailyLogsInfo);
+  try {
+    currDailyLogsInfo = await db.query(query, params);
+    res.json(currDailyLogsInfo.rows);
+  } catch (error) {
+    console.error("Error fetching daily logs:", error);
+    res.status(500).send("Error fetching daily logs");
+  }
 });
 
 app.post("/expenses", async (req, res) => {
@@ -155,17 +219,17 @@ app.post("/expenses", async (req, res) => {
 
   if (action === "Yesterday") {
     currExpensesInfo = await db.query(
-      "SELECT e.expense_id, p.project_name, TO_CHAR (e.expense_date, 'YYYY-MM-DD') AS expense_date, e.expense_type, e.amount, e.daily_log_id, s.name AS staff_name, e.status FROM expenses e JOIN projects p ON e.project_id = p.project_id JOIN staff s ON e.staff_id = s.staff_id WHERE e.project_id = $1 AND expense_date = $2 ORDER BY e.expense_id",
+      "SELECT e.expense_id, p.project_name, TO_CHAR (e.expense_date, 'YYYY-MM-DD') AS expense_date, e.expense_type, e.amount, e.daily_log_id, s.name AS staff_name, e.status, e.pdf_url FROM expenses e JOIN projects p ON e.project_id = p.project_id JOIN staff s ON e.staff_id = s.staff_id WHERE e.project_id = $1 AND expense_date = $2 ORDER BY e.expense_id",
       [projectId, formattedYesterday]
     );
   } else if (action === "Today") {
     currExpensesInfo = await db.query(
-      "SELECT e.expense_id, p.project_name, TO_CHAR (e.expense_date, 'YYYY-MM-DD') AS expense_date, e.expense_type, e.amount, e.daily_log_id, s.name AS staff_name, e.status FROM expenses e JOIN projects p ON e.project_id = p.project_id JOIN staff s ON e.staff_id = s.staff_id WHERE e.project_id = $1 AND expense_date = $2 ORDER BY e.expense_id",
+      "SELECT e.expense_id, p.project_name, TO_CHAR (e.expense_date, 'YYYY-MM-DD') AS expense_date, e.expense_type, e.amount, e.daily_log_id, s.name AS staff_name, e.status, e.pdf_url FROM expenses e JOIN projects p ON e.project_id = p.project_id JOIN staff s ON e.staff_id = s.staff_id WHERE e.project_id = $1 AND expense_date = $2 ORDER BY e.expense_id",
       [projectId, formattedToday]
     );
   } else if (action === "View All") {
     currExpensesInfo = await db.query(
-      "SELECT e.expense_id, p.project_name, TO_CHAR (e.expense_date, 'YYYY-MM-DD') AS expense_date, e.expense_type, e.amount, e.daily_log_id, s.name AS staff_name, e.status FROM expenses e JOIN projects p ON e.project_id = p.project_id JOIN staff s ON e.staff_id = s.staff_id WHERE e.project_id = $1 ORDER BY e.expense_id",
+      "SELECT e.expense_id, p.project_name, TO_CHAR (e.expense_date, 'YYYY-MM-DD') AS expense_date, e.expense_type, e.amount, e.daily_log_id, s.name AS staff_name, e.status, e.pdf_url FROM expenses e JOIN projects p ON e.project_id = p.project_id JOIN staff s ON e.staff_id = s.staff_id WHERE e.project_id = $1 ORDER BY e.expense_id",
       [projectId]
     );
   } else {
@@ -255,7 +319,6 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// Below is all login and passport
 // Login route
 app.post("/login", passport.authenticate("local"), (req, res) => {
   res.status(200).json({ message: "Login successful" });
@@ -307,6 +370,124 @@ passport.deserializeUser(async (id, cb) => {
     cb(null, user);
   } catch (err) {
     cb(err);
+  }
+});
+
+// Edit functionality
+app.post("/updateProject", async (req, res) => {
+  const {
+    project_id,
+    project_name,
+    project_status,
+    start_date,
+    end_date,
+    details,
+    location,
+    notifications,
+  } = req.body;
+
+  try {
+    const result = await db.query(
+      `UPDATE projects SET project_name = $1, project_status = $2, start_date = $3, end_date = $4, details = $5, location = $6, notifications = $7 WHERE project_id = $8 RETURNING *`,
+      [
+        project_name,
+        project_status,
+        start_date,
+        end_date,
+        details,
+        location,
+        notifications,
+        project_id,
+      ]
+    );
+    console.log(result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error updating project:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Title functionality
+app.post("/title", async (req, res) => {
+  const { project_id } = req.body;
+  try {
+    const result = await db.query(
+      "SELECT project_name FROM projects WHERE project_id = $1",
+      [project_id]
+    );
+    if (result.rows.length > 0) {
+      res.json({ project_name: result.rows[0].project_name });
+    } else {
+      res.status(404).json({ error: "Project not found" });
+    }
+  } catch (err) {
+    console.error("Error fetching project title:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Add functionality
+app.get("/engineers", async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM engineers");
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching engineers:", error);
+    res.status(500).send("Error fetching engineers");
+  }
+});
+
+app.post("/addProject", async (req, res) => {
+  let {
+    project_name,
+    project_status,
+    start_date,
+    end_date,
+    details,
+    location,
+    notifications,
+    engineer_ids,
+  } = req.body;
+
+  try {
+    // Error if date is "" instead of null
+    start_date = start_date === "" ? null : start_date;
+    end_date = end_date === "" ? null : end_date;
+
+    const newProjectResult = await db.query(
+      `INSERT INTO projects (project_name, project_status, start_date, end_date, details, location, notifications)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        project_name,
+        project_status,
+        start_date,
+        end_date,
+        details,
+        location,
+        notifications,
+      ]
+    );
+
+    const newProject = newProjectResult.rows[0];
+    // console.log(newProject);
+
+    // Insert the engineer assignments into the projects_assign_engineers table
+    const engineerAssignments = engineer_ids.map((engineer_id) => {
+      return db.query(
+        `INSERT INTO projects_assign_engineers (project_id, engineer_id)
+         VALUES ($1, $2)`,
+        [newProject.project_id, engineer_id]
+      );
+    });
+
+    await Promise.all(engineerAssignments);
+
+    res.status(200).json(newProject);
+  } catch (error) {
+    console.error("Error adding project:", error);
+    res.status(500).send("Error adding project");
   }
 });
 
