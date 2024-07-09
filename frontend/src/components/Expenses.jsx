@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const Expenses = () => {
   const [expenses, setExpenses] = useState([]);
   const location = useLocation();
   const { project, action } = location.state;
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function fetchExpenses() {
@@ -29,9 +30,14 @@ const Expenses = () => {
     fetchExpenses();
   }, [project, action]);
 
+  function handleAddExpense() {
+    navigate("/addExpense");
+  }
+
   return (
     <div className="container mt-5" id="expenses">
-      <h1>Expenses Report</h1>
+      <h1>Expenses Report for {project.project_name}</h1>
+      {/* <button onClick={handleAddExpense}>Add Expense</button> */}
       <table className="table mt-3">
         <thead>
           <tr>
@@ -39,53 +45,63 @@ const Expenses = () => {
             <th>Project Name</th>
             <th>Expense Date</th>
             <th>Expense Type</th>
+            <th>Expense Details</th>
             <th>Amount</th>
             <th>Daily Log ID</th>
-            <th>Staff Name</th>
-            <th>Status</th>
+            <th>Engineer Name</th>
+            <th>Is Billable</th>
+            <th>Status 1</th>
+            <th>Status 2</th>
+            <th>Status 3</th>
             <th>PDF</th>
           </tr>
         </thead>
         <tbody>
-          {expenses.map((expense) => (
-            <tr key={expense.expense_id}>
-              <td>{expense.expense_id}</td>
-              <td>{expense.project_name}</td>
-              <td>{expense.expense_date}</td>
-              <td>
-                {expense.expense_type === 0
-                  ? "tools"
-                  : expense.expense_type === 1
-                  ? "transportation"
-                  : expense.expense_type === 2
-                  ? "meals"
-                  : expense.expense_type === 3
-                  ? "medical"
-                  : expense.expense_type === 4
-                  ? "accommodation"
-                  : "misc"}
-              </td>
-              <td>{expense.amount}</td>
-              <td>{expense.daily_log_id}</td>
-              <td>{expense.staff_name}</td>
-              <td>
-                {expense.status === 0
-                  ? "not-filled"
-                  : expense.status === 1
-                  ? "filled"
-                  : "covered"}
-              </td>
-              <td>
-                <a
-                  href={expense.pdf_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  PDF
-                </a>
+          {expenses.length > 0 ? (
+            expenses.map((expense) => (
+              <tr key={expense.expense_id}>
+                <td>{expense.expense_id}</td>
+                <td>{expense.project_name}</td>
+                <td>{expense.expense_date}</td>
+                <td>
+                  {expense.expense_type === 0
+                    ? "tools"
+                    : expense.expense_type === 1
+                    ? "transportation"
+                    : expense.expense_type === 2
+                    ? "meals"
+                    : expense.expense_type === 3
+                    ? "medical"
+                    : expense.expense_type === 4
+                    ? "accommodation"
+                    : "misc"}
+                </td>
+                <td>{expense.expense_details}</td>
+                <td>{expense.amount}</td>
+                <td>{expense.daily_log_id}</td>
+                <td>{expense.engineer_name}</td>
+                <td>{expense.is_billable === "1" ? "Yes" : "No"}</td>
+                <td>{expense.status1 === "1" ? "Yes" : "No"}</td>
+                <td>{expense.status2 === "1" ? "Yes" : "No"}</td>
+                <td>{expense.status3 === "1" ? "Yes" : "No"}</td>
+                <td>
+                  <a
+                    href={expense.pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    PDF
+                  </a>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="13" className="text-center">
+                No expenses available
               </td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
     </div>

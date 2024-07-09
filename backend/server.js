@@ -206,7 +206,6 @@ app.post("/dailyLogs", async (req, res) => {
 
 app.post("/expenses", async (req, res) => {
   const projectId = req.body.project_id;
-
   const action = req.body.action;
   const today = new Date();
   const yesterday = new Date(today);
@@ -217,26 +216,49 @@ app.post("/expenses", async (req, res) => {
 
   let currExpensesInfo = null;
 
+  const baseQuery = `
+    SELECT 
+      e.expense_id, 
+      p.project_name, 
+      TO_CHAR(e.expense_date, 'YYYY-MM-DD') AS expense_date, 
+      e.expense_type, 
+      e.expense_details, 
+      e.amount, 
+      e.daily_log_id, 
+      en.name AS engineer_name, 
+      e.is_billable, 
+      e.status1, 
+      e.status2, 
+      e.status3, 
+      e.pdf_url 
+    FROM 
+      expenses e 
+    JOIN 
+      projects p ON e.project_id = p.project_id 
+    JOIN 
+      engineers en ON e.engineer_id = en.engineer_id 
+    WHERE 
+      e.project_id = $1 `;
+
   if (action === "Yesterday") {
     currExpensesInfo = await db.query(
-      "SELECT e.expense_id, p.project_name, TO_CHAR (e.expense_date, 'YYYY-MM-DD') AS expense_date, e.expense_type, e.amount, e.daily_log_id, s.name AS staff_name, e.status, e.pdf_url FROM expenses e JOIN projects p ON e.project_id = p.project_id JOIN staff s ON e.staff_id = s.staff_id WHERE e.project_id = $1 AND expense_date = $2 ORDER BY e.expense_id",
+      baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_id",
       [projectId, formattedYesterday]
     );
   } else if (action === "Today") {
     currExpensesInfo = await db.query(
-      "SELECT e.expense_id, p.project_name, TO_CHAR (e.expense_date, 'YYYY-MM-DD') AS expense_date, e.expense_type, e.amount, e.daily_log_id, s.name AS staff_name, e.status, e.pdf_url FROM expenses e JOIN projects p ON e.project_id = p.project_id JOIN staff s ON e.staff_id = s.staff_id WHERE e.project_id = $1 AND expense_date = $2 ORDER BY e.expense_id",
+      baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_id",
       [projectId, formattedToday]
     );
   } else if (action === "View All") {
-    currExpensesInfo = await db.query(
-      "SELECT e.expense_id, p.project_name, TO_CHAR (e.expense_date, 'YYYY-MM-DD') AS expense_date, e.expense_type, e.amount, e.daily_log_id, s.name AS staff_name, e.status, e.pdf_url FROM expenses e JOIN projects p ON e.project_id = p.project_id JOIN staff s ON e.staff_id = s.staff_id WHERE e.project_id = $1 ORDER BY e.expense_id",
-      [projectId]
-    );
+    currExpensesInfo = await db.query(baseQuery + "ORDER BY e.expense_id", [
+      projectId,
+    ]);
   } else {
-    res.send("Unknown action");
+    return res.status(400).send("Unknown action");
   }
 
-  expensesInfo = currExpensesInfo.rows;
+  const expensesInfo = currExpensesInfo.rows;
   res.json(expensesInfo);
 });
 
@@ -427,7 +449,7 @@ app.post("/title", async (req, res) => {
   }
 });
 
-// Add functionality
+/////////////////////// Add functionality
 app.get("/engineers", async (req, res) => {
   try {
     const result = await db.query("SELECT * FROM engineers");
@@ -435,6 +457,21 @@ app.get("/engineers", async (req, res) => {
   } catch (error) {
     console.error("Error fetching engineers:", error);
     res.status(500).send("Error fetching engineers");
+  }
+});
+
+// Fetch Daily Logs for a specific project
+app.get("/dailyLogs", async (req, res) => {
+  const { project_id } = req.body;
+  try {
+    const result = await db.query(
+      "SELECT daily_log_id, TO_CHAR(log_date, 'YYYY-MM-DD') AS log_date FROM daily_logs WHERE project_id = $1",
+      [project_id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching daily logs:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -482,12 +519,113 @@ app.post("/addProject", async (req, res) => {
       );
     });
 
+    // Research this
     await Promise.all(engineerAssignments);
 
     res.status(200).json(newProject);
   } catch (error) {
     console.error("Error adding project:", error);
     res.status(500).send("Error adding project");
+  }
+});
+
+app.post("/addDailyLog", async (req, res) => {
+  const {
+    daily_log_id,
+    project_id,
+    log_date,
+    engineer_id,
+    status_submitted,
+    status_reimbursed,
+    hours,
+    pdf_url,
+  } = req.body;
+
+  try {
+    const result = await db.query(
+      `INSERT INTO daily_logs (
+        daily_log_id,
+        project_id,
+        log_date,
+        engineer_id,
+        status_submitted,
+        status_reimbursed,
+        hours,
+        pdf_url
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *`,
+      [
+        daily_log_id,
+        project_id,
+        log_date,
+        engineer_id,
+        status_submitted,
+        status_reimbursed,
+        hours,
+        pdf_url,
+      ]
+    );
+
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.error("Error adding daily log:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/addExpense", async (req, res) => {
+  const {
+    daily_log_id,
+    engineer_id,
+    project_id,
+    expense_date,
+    expense_type,
+    expense_details,
+    amount,
+    is_billable,
+    status1,
+    status2,
+    status3,
+    pdf_url,
+  } = req.body;
+
+  try {
+    const result = await db.query(
+      `INSERT INTO expenses (
+        daily_log_id,
+        engineer_id,
+        project_id,
+        expense_date,
+        expense_type,
+        expense_details,
+        amount,
+        is_billable,
+        status1,
+        status2,
+        status3,
+        pdf_url
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING *`,
+      [
+        daily_log_id,
+        engineer_id,
+        project_id,
+        expense_date,
+        expense_type,
+        expense_details,
+        amount,
+        is_billable,
+        status1,
+        status2,
+        status3,
+        pdf_url,
+      ]
+    );
+
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.error("Error adding expense:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

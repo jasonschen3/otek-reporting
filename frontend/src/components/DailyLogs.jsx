@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 const DailyLogs = () => {
   const [dailyLogs, setDailyLogs] = useState([]);
   const [projectTitle, setProjectTitle] = useState("");
   const { projectId, action } = useParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function fetchDailyLogs() {
@@ -41,9 +42,13 @@ const DailyLogs = () => {
     fetchProjectName();
   }, [projectId, action]);
 
+  function handleAddDailyLog() {
+    navigate("/addDailyLog");
+  }
   return (
     <div className="container mt-5" id="daily-logs">
       <h1>Daily Logs Report for {projectTitle}</h1>
+      {/* <button onClick={handleAddDailyLog}>Add Daily Log</button> */}
       <table className="table mt-3">
         <thead>
           <tr>
@@ -52,7 +57,7 @@ const DailyLogs = () => {
             <th>Project Name</th>
             <th>Engineer</th>
             <th>Submitted</th>
-            <th>Reimbursed</th>
+            <th>Submitted Billing</th>
             <th>Hours</th>
             <th>PDF</th>
           </tr>

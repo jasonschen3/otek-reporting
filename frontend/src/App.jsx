@@ -8,6 +8,8 @@ import Projects from "./components/Projects";
 import DailyLogs from "./components/DailyLogs";
 import AddProject from "./components/AddProject";
 import Expenses from "./components/Expenses";
+import AddExpense from "./components/AddExpense";
+import AddDailyLog from "./components/AddDailyLog";
 
 function App() {
   return (
@@ -22,7 +24,9 @@ function App() {
           path="/dailyLogs/:projectId/:action"
           element={<DailyLogs />}
         ></Route>
+        <Route path="/addDailyLog" element={<AddDailyLog />}></Route>
         <Route path="/expenses" element={<Expenses />}></Route>
+        <Route path="/addExpense" element={<AddExpense />}></Route>
       </Routes>
     </BrowserRouter>
   );

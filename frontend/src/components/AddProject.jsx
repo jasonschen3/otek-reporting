@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-function AddProject({ onProjectAdded }) {
+function AddProject() {
   const [message, setMessage] = useState("");
   const [newProject, setNewProject] = useState({
     project_name: "",

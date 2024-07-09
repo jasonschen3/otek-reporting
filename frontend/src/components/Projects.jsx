@@ -38,9 +38,19 @@ function Projects() {
       [name]: value === "" ? null : value,
     });
   };
+
   const handleAddProject = async () => {
     navigate("/addProject");
   };
+
+  const handleAddExpense = async () => {
+    navigate("/addExpense");
+  };
+
+  const handleAddDailyLog = async () => {
+    navigate("/addDailyLog");
+  };
+
   const handleSave = async () => {
     try {
       const response = await axios.post("http://localhost:3000/updateProject", {
@@ -111,7 +121,10 @@ function Projects() {
         </label>
         <button type="submit">Display</button>
       </form>
+      <br></br>
       <button onClick={handleAddProject}>Add Project</button>
+      <button onClick={handleAddExpense}>Add Expense</button>
+      <button onClick={handleAddDailyLog}>Add Daily Log</button>
       <table className="table mt-3">
         <thead>
           <tr>
