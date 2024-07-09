@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Register from "./components/Register";
 import Projects from "./components/Projects";
 import DailyLogs from "./components/DailyLogs";
+import AddProject from "./components/AddProject";
 import Expenses from "./components/Expenses";
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />}></Route>
         <Route path="/projects" element={<Projects />}></Route>
+        <Route path="/addProject" element={<AddProject />}></Route>
         <Route
           path="/dailyLogs/:projectId/:action"
           element={<DailyLogs />}
