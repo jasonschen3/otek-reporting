@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 function AddDailyLog({ onDailyLogAdded }) {
+  let ip = "http://localhost:3000";
   const [message, setMessage] = useState("");
   const [newDailyLog, setNewDailyLog] = useState({
     daily_log_id: "",
@@ -18,7 +19,7 @@ function AddDailyLog({ onDailyLogAdded }) {
   useEffect(() => {
     const fetchEngineers = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/engineers");
+        const res = await axios.get(`${ip}/engineers`);
         setEngineers(res.data);
       } catch (error) {
         console.error("There was an error fetching the engineers data", error);
@@ -57,10 +58,7 @@ function AddDailyLog({ onDailyLogAdded }) {
     };
 
     try {
-      const response = await axios.post(
-        "http://localhost:3000/addDailyLog",
-        dailyLogData
-      );
+      const response = await axios.post(`${ip}/addDailyLog`, dailyLogData);
       if (response.status === 200) {
         setNewDailyLog({
           daily_log_id: "",

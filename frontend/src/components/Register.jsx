@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "../App.css";
 
 function Register() {
+  let ip = "http://localhost:3000";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -13,7 +14,7 @@ function Register() {
     event.preventDefault();
 
     try {
-      const response = await axios.post("http://localhost:3000/register", {
+      const response = await axios.post(`${ip}/register`, {
         username: email,
         password: password,
       });

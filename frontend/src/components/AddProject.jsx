@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 function AddProject() {
+  let ip = "http://localhost:3000";
   const [message, setMessage] = useState("");
   const [newProject, setNewProject] = useState({
     project_name: "",
@@ -18,7 +19,7 @@ function AddProject() {
   useEffect(() => {
     const fetchEngineers = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/engineers");
+        const res = await axios.get(`${ip}/engineers`);
         setEngineers(res.data);
       } catch (error) {
         console.error("There was an error fetching the engineers data", error);
@@ -49,7 +50,7 @@ function AddProject() {
   const handleAddProject = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://localhost:3000/addProject", {
+      const response = await axios.post(`${ip}/addProject`, {
         ...newProject,
       });
       // console.log(response.status);

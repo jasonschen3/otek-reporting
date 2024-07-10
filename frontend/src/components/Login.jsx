@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 function Login() {
+  let ip = "http://localhost:3000";
   const [username, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -12,7 +13,7 @@ function Login() {
     event.preventDefault();
     console.log("username react", username);
     axios
-      .post("http://localhost:3000/login", {
+      .post(`${ip}/login`, {
         username: username,
         password: password,
       })

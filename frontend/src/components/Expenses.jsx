@@ -3,6 +3,7 @@ import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const Expenses = () => {
+  let ip = "http://localhost:3000";
   const [expenses, setExpenses] = useState([]);
   const location = useLocation();
   const { project, action } = location.state;
@@ -11,7 +12,7 @@ const Expenses = () => {
   useEffect(() => {
     async function fetchExpenses() {
       try {
-        const response = await axios.post("http://localhost:3000/expenses", {
+        const response = await axios.post(`${ip}/expenses`, {
           project_id: project.project_id,
           action: action,
         });

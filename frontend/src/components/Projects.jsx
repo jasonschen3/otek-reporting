@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 function Projects() {
+  let ip = "http://localhost:3000";
   const [projects, setProjects] = useState([]);
   const [editProject, setEditProject] = useState(null);
 
@@ -12,7 +13,7 @@ function Projects() {
   useEffect(() => {
     if (location.state?.isAuthenticated) {
       axios
-        .get("http://localhost:3000/projects")
+        .get(`${ip}/projects`)
         .then((res) => {
           setProjects(res.data);
         })
@@ -53,7 +54,7 @@ function Projects() {
 
   const handleSave = async () => {
     try {
-      const response = await axios.post("http://localhost:3000/updateProject", {
+      const response = await axios.post(`${ip}/updateProject`, {
         ...editProject,
       });
 

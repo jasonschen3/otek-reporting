@@ -3,6 +3,7 @@ import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 
 const DailyLogs = () => {
+  let ip = "http://localhost:3000";
   const [dailyLogs, setDailyLogs] = useState([]);
   const [projectTitle, setProjectTitle] = useState("");
   const { projectId, action } = useParams();
@@ -11,7 +12,7 @@ const DailyLogs = () => {
   useEffect(() => {
     async function fetchDailyLogs() {
       try {
-        const response = await axios.post("http://localhost:3000/dailyLogs", {
+        const response = await axios.post(`${ip}/dailyLogs`, {
           project_id: projectId,
           action: action,
         });
@@ -26,7 +27,7 @@ const DailyLogs = () => {
     }
     async function fetchProjectName() {
       try {
-        const response = await axios.post("http://localhost:3000/title", {
+        const response = await axios.post(`${ip}/title`, {
           project_id: projectId,
         });
         if (response.status === 200) {
