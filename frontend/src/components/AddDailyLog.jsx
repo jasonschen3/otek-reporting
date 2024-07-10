@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 function AddDailyLog() {
@@ -16,10 +16,15 @@ function AddDailyLog() {
   const [engineers, setEngineers] = useState([]);
 
   // Use passed in vari from state
+  const nav = useNavigate();
   const location = useLocation();
-  const { projectId, projectTitle } = location.state || {};
+  const { projectId, projectTitle, isAuthenticated } = location.state || {};
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      nav("/unauthorized");
+      return;
+    }
     const fetchEngineers = async () => {
       try {
         const res = await axios.get(`${ip}/engineers`);

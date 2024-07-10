@@ -6,12 +6,16 @@ const Expenses = () => {
   let ip = "http://localhost:3000";
   const [expenses, setExpenses] = useState([]);
   const location = useLocation();
-  const { project, action } = location.state; // Use state can access
+  const { project, action, isAuthenticated } = location.state || {}; // Use state doesn't need authentication prot
   const navigate = useNavigate();
 
   useEffect(() => {
     async function fetchExpenses() {
       try {
+        if (!isAuthenticated) {
+          navigate("/unauthorized");
+          return;
+        }
         const response = await axios.post(`${ip}/expenses`, {
           project_id: project.project_id,
           action: action,
@@ -27,7 +31,6 @@ const Expenses = () => {
         console.error("Error fetching expenses:", error);
       }
     }
-
     fetchExpenses();
   }, [project, action]);
 
@@ -36,13 +39,15 @@ const Expenses = () => {
       state: {
         projectId: project.project_id,
         projectTitle: project.project_name,
+        isAuthenticated: true,
       },
     });
   }
 
   return (
     <div className="container mt-5" id="expenses">
-      <h1>Expenses Report for {project.project_name}</h1>
+      <h1>Expenses Report for {project?.project_name || ""}</h1>
+      {/* ? used to check if element exists */}
       <button onClick={handleAddExpense}>Add Expense</button>
       <table className="table mt-3">
         <thead>

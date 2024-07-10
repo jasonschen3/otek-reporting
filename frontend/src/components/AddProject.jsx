@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 function AddProject() {
@@ -16,7 +17,15 @@ function AddProject() {
   });
   const [engineers, setEngineers] = useState([]);
 
+  const nav = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated } = location.state || {}; // NOT A FUNCTION
+
   useEffect(() => {
+    if (!isAuthenticated) {
+      nav("/unauthorized");
+      return;
+    }
     const fetchEngineers = async () => {
       try {
         const res = await axios.get(`${ip}/engineers`);

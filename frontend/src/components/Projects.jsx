@@ -42,7 +42,7 @@ function Projects() {
   };
 
   const handleAddProject = async () => {
-    navigate("/addProject");
+    navigate("/addProject", { state: { isAuthenticated: true } });
   };
 
   const handleSave = async () => {
@@ -108,12 +108,22 @@ function Projects() {
 
   // use url
   const navigateToDailyLogs = (projectId, action) => {
-    navigate(`/dailyLogs/${projectId}/${action}`);
+    // navigate(`/dailyLogs/${projectId}/${action}`);
+    // Changed to state for more security
+    navigate("/dailyLogs", {
+      state: {
+        projectId,
+        action,
+        isAuthenticated: true,
+      },
+    });
   };
 
   // use state
   const navigateToExpenses = (project, action) => {
-    navigate("/expenses", { state: { project, action } });
+    navigate("/expenses", {
+      state: { project, action, isAuthenticated: true },
+    });
   };
 
   return (

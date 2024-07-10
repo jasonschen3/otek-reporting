@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { format } from "date-fns"; // Import date-fns for date formatting
 
@@ -24,9 +24,14 @@ function AddExpense() {
   const [selectedDate, setSelectedDate] = useState("");
 
   const location = useLocation();
-  const { projectId, projectTitle } = location.state || {};
+  const { projectId, projectTitle, isAuthenticated } = location.state || {};
+  const nav = useNavigate();
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      nav("/Unauthorized");
+      return;
+    }
     const fetchEngineers = async () => {
       try {
         const res = await axios.get(`${ip}/engineers`);
