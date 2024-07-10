@@ -6,7 +6,7 @@ const Expenses = () => {
   let ip = "http://localhost:3000";
   const [expenses, setExpenses] = useState([]);
   const location = useLocation();
-  const { project, action } = location.state;
+  const { project, action } = location.state; // Use state can access
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,13 +32,18 @@ const Expenses = () => {
   }, [project, action]);
 
   function handleAddExpense() {
-    navigate("/addExpense");
+    navigate("/addExpense", {
+      state: {
+        projectId: project.project_id,
+        projectTitle: project.project_name,
+      },
+    });
   }
 
   return (
     <div className="container mt-5" id="expenses">
       <h1>Expenses Report for {project.project_name}</h1>
-      {/* <button onClick={handleAddExpense}>Add Expense</button> */}
+      <button onClick={handleAddExpense}>Add Expense</button>
       <table className="table mt-3">
         <thead>
           <tr>

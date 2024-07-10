@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
 
-function AddDailyLog({ onDailyLogAdded }) {
+function AddDailyLog() {
   let ip = "http://localhost:3000";
   const [message, setMessage] = useState("");
   const [newDailyLog, setNewDailyLog] = useState({
-    daily_log_id: "",
-    project_id: "",
     log_date: "",
     engineer_id: "",
     status_submitted: false,
@@ -15,6 +14,10 @@ function AddDailyLog({ onDailyLogAdded }) {
     pdf_url: "",
   });
   const [engineers, setEngineers] = useState([]);
+
+  // Use passed in vari from state
+  const location = useLocation();
+  const { projectId, projectTitle } = location.state || {};
 
   useEffect(() => {
     const fetchEngineers = async () => {
@@ -43,15 +46,7 @@ function AddDailyLog({ onDailyLogAdded }) {
     // Convert boolean fields to 1 or 0
     const dailyLogData = {
       ...newDailyLog,
-      daily_log_id: newDailyLog.daily_log_id
-        ? parseInt(newDailyLog.daily_log_id)
-        : null,
-      project_id: newDailyLog.project_id
-        ? parseInt(newDailyLog.project_id)
-        : null,
-      engineer_id: newDailyLog.engineer_id
-        ? parseInt(newDailyLog.engineer_id)
-        : null,
+      project_id: projectId,
       status_submitted: newDailyLog.status_submitted ? 1 : 0,
       status_reimbursed: newDailyLog.status_reimbursed ? 1 : 0,
       hours: newDailyLog.hours ? parseFloat(newDailyLog.hours) : null,
@@ -61,8 +56,6 @@ function AddDailyLog({ onDailyLogAdded }) {
       const response = await axios.post(`${ip}/addDailyLog`, dailyLogData);
       if (response.status === 200) {
         setNewDailyLog({
-          daily_log_id: "",
-          project_id: "",
           log_date: "",
           engineer_id: "",
           status_submitted: false,
@@ -71,7 +64,6 @@ function AddDailyLog({ onDailyLogAdded }) {
           pdf_url: "",
         });
         setMessage("Added daily log");
-        onDailyLogAdded(response.data);
       } else {
         setMessage("Failed to add daily log");
       }
@@ -83,29 +75,7 @@ function AddDailyLog({ onDailyLogAdded }) {
 
   return (
     <form onSubmit={handleAddDailyLog} className="container mt-5">
-      <h2>Add Daily Log</h2>
-      <div className="form-group">
-        <label>Daily Log ID</label>
-        <input
-          type="text"
-          name="daily_log_id"
-          value={newDailyLog.daily_log_id}
-          onChange={handleNewDailyLogChange}
-          className="form-control"
-          required
-        />
-      </div>
-      <div className="form-group">
-        <label>Project ID</label>
-        <input
-          type="text"
-          name="project_id"
-          value={newDailyLog.project_id}
-          onChange={handleNewDailyLogChange}
-          className="form-control"
-          required
-        />
-      </div>
+      <h2>Add Daily Log for {projectTitle}</h2>
       <div className="form-group">
         <label>Log Date</label>
         <input
@@ -160,7 +130,6 @@ function AddDailyLog({ onDailyLogAdded }) {
           value={newDailyLog.hours}
           onChange={handleNewDailyLogChange}
           className="form-control"
-          required
         />
       </div>
       <div className="form-group">

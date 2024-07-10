@@ -6,6 +6,7 @@ function Projects() {
   let ip = "http://localhost:3000";
   const [projects, setProjects] = useState([]);
   const [editProject, setEditProject] = useState(null);
+  const [displayingMessage, setDisplayingMessage] = useState("");
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,14 +43,6 @@ function Projects() {
 
   const handleAddProject = async () => {
     navigate("/addProject");
-  };
-
-  const handleAddExpense = async () => {
-    navigate("/addExpense");
-  };
-
-  const handleAddDailyLog = async () => {
-    navigate("/addDailyLog");
   };
 
   const handleSave = async () => {
@@ -91,7 +84,20 @@ function Projects() {
       );
 
       if (response.status === 200) {
-        window.location.href = "/projects";
+        if (ongoing && completed) {
+          setDisplayingMessage("All");
+        } else if (ongoing) {
+          setDisplayingMessage("Ongoing");
+        } else if (completed) {
+          setDisplayingMessage("Completed");
+        } else {
+          setDisplayingMessage("Nothing");
+        }
+        // window.location.href = "/projects"; Causes a full reload
+        // Reload the projects data without reloading the page
+        await axios.get(`${ip}/projects`).then((res) => {
+          setProjects(res.data);
+        });
       } else {
         console.error("Failed to update project display");
       }
@@ -100,10 +106,12 @@ function Projects() {
     }
   };
 
+  // use url
   const navigateToDailyLogs = (projectId, action) => {
     navigate(`/dailyLogs/${projectId}/${action}`);
   };
 
+  // use state
   const navigateToExpenses = (project, action) => {
     navigate("/expenses", { state: { project, action } });
   };
@@ -111,21 +119,21 @@ function Projects() {
   return (
     <div className="container mt-5">
       <h1>Projects Report</h1>
-      <form onSubmit={handleUpdateProjectDisplay}>
-        <label>
-          <input type="checkbox" name="ongoing" id="ongoingCheckbox" />
-          Ongoing
-        </label>
-        <label>
-          <input type="checkbox" name="completed" id="completedCheckbox" />
-          Completed
-        </label>
-        <button type="submit">Display</button>
-      </form>
-      <br></br>
-      <button onClick={handleAddProject}>Add Project</button>
-      <button onClick={handleAddExpense}>Add Expense</button>
-      <button onClick={handleAddDailyLog}>Add Daily Log</button>
+      <div className="subheading">
+        <form onSubmit={handleUpdateProjectDisplay}>
+          <label>
+            <input type="checkbox" name="ongoing" id="ongoingCheckbox" />
+            Ongoing
+          </label>
+          <label>
+            <input type="checkbox" name="completed" id="completedCheckbox" />
+            Completed
+          </label>
+          <button type="submit">Display</button>
+          <div>Currently Displaying: {displayingMessage}</div>
+        </form>
+        <button onClick={handleAddProject}>Add Project</button>
+      </div>
       <table className="table mt-3">
         <thead>
           <tr>

@@ -129,3 +129,8 @@ nav a:hover {
 #statusForm button {
   color: white;
 }
+
+.subheading {
+  display: flex;
+  justify-content: space-between;
+}

@@ -44,12 +44,14 @@ const DailyLogs = () => {
   }, [projectId, action]);
 
   function handleAddDailyLog() {
-    navigate("/addDailyLog");
+    navigate("/addDailyLog", {
+      state: { projectId: projectId, projectTitle: projectTitle },
+    });
   }
   return (
     <div className="container mt-5" id="daily-logs">
       <h1>Daily Logs Report for {projectTitle}</h1>
-      {/* <button onClick={handleAddDailyLog}>Add Daily Log</button> */}
+      <button onClick={handleAddDailyLog}>Add Daily Log</button>
       <table className="table mt-3">
         <thead>
           <tr>

@@ -41,7 +41,6 @@ const db = new pg.Client({
 db.connect();
 
 let projectsInfo = []; // arr of json
-let expensesInfo = [];
 let projectDisplayStatus = 1; // 0 1 2 3, display none, display ongoing, display completed, display all
 
 async function updateCompanyInfo() {
@@ -460,15 +459,19 @@ app.get("/engineers", async (req, res) => {
   }
 });
 
-// Fetch Daily Logs for a specific project
+// Fetch Daily Logs for a specific project based on id and date and returns logs with same id and engineer name
 app.get("/dailyLogs", async (req, res) => {
-  const { project_id } = req.body;
+  const { projectId, date } = req.query;
+  console.log(projectId, " Project id");
+  console.log(date, " date");
   try {
     const result = await db.query(
-      "SELECT daily_log_id, TO_CHAR(log_date, 'YYYY-MM-DD') AS log_date FROM daily_logs WHERE project_id = $1",
-      [project_id]
+      `SELECT dl.*, e.name as engineer_name FROM daily_logs dl
+       JOIN engineers e ON dl.engineer_id = e.engineer_id
+       WHERE dl.project_id = $1 AND dl.log_date = $2`,
+      [projectId, date]
     );
-    res.json(result.rows);
+    res.status(200).json(result.rows);
   } catch (err) {
     console.error("Error fetching daily logs:", err);
     res.status(500).json({ error: "Internal Server Error" });
@@ -531,7 +534,6 @@ app.post("/addProject", async (req, res) => {
 
 app.post("/addDailyLog", async (req, res) => {
   const {
-    daily_log_id,
     project_id,
     log_date,
     engineer_id,
@@ -544,7 +546,6 @@ app.post("/addDailyLog", async (req, res) => {
   try {
     const result = await db.query(
       `INSERT INTO daily_logs (
-        daily_log_id,
         project_id,
         log_date,
         engineer_id,
@@ -552,10 +553,9 @@ app.post("/addDailyLog", async (req, res) => {
         status_reimbursed,
         hours,
         pdf_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *`,
       [
-        daily_log_id,
         project_id,
         log_date,
         engineer_id,
@@ -573,11 +573,11 @@ app.post("/addDailyLog", async (req, res) => {
   }
 });
 
+// Fix
 app.post("/addExpense", async (req, res) => {
   const {
-    daily_log_id,
-    engineer_id,
     project_id,
+    engineer_id,
     expense_date,
     expense_type,
     expense_details,
@@ -588,6 +588,8 @@ app.post("/addExpense", async (req, res) => {
     status3,
     pdf_url,
   } = req.body;
+
+  const daily_log_id = req.body.daily_log_id;
 
   try {
     const result = await db.query(

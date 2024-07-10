@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
+import { format } from "date-fns"; // Import date-fns for date formatting
 
 function AddExpense() {
   let ip = "http://localhost:3000";
@@ -10,7 +12,6 @@ function AddExpense() {
     expense_details: "",
     amount: "",
     daily_log_id: "",
-    project_id: "",
     engineer_id: "",
     is_billable: false,
     status1: false,
@@ -19,6 +20,11 @@ function AddExpense() {
     pdf_url: "",
   });
   const [engineers, setEngineers] = useState([]);
+  const [dailyLogs, setDailyLogs] = useState([]);
+  const [selectedDate, setSelectedDate] = useState("");
+
+  const location = useLocation();
+  const { projectId, projectTitle } = location.state || {};
 
   useEffect(() => {
     const fetchEngineers = async () => {
@@ -33,6 +39,29 @@ function AddExpense() {
     fetchEngineers();
   }, []);
 
+  useEffect(() => {
+    if (selectedDate) {
+      console.log("Inside");
+      const fetchDailyLogs = async () => {
+        try {
+          console.log(selectedDate, " ", projectId);
+          const res = await axios.get(`${ip}/dailyLogs`, {
+            params: { projectId, date: selectedDate },
+          });
+          setDailyLogs(res.data);
+          console.log("fetched", res.data);
+        } catch (error) {
+          console.error(
+            "There was an error fetching the daily logs data",
+            error
+          );
+        }
+      };
+
+      fetchDailyLogs();
+    }
+  }, [projectId, selectedDate]);
+
   const handleNewExpenseChange = (e) => {
     const { name, value, type, checked } = e.target;
     setNewExpense({
@@ -44,19 +73,13 @@ function AddExpense() {
   const handleAddExpense = async (e) => {
     e.preventDefault();
 
-    // Convert empty strings to null for integer fields
     const expenseData = {
       ...newExpense,
+      project_id: projectId,
       expense_type: newExpense.expense_type
         ? parseInt(newExpense.expense_type)
         : null,
       amount: newExpense.amount ? parseFloat(newExpense.amount) : null,
-      daily_log_id: newExpense.daily_log_id
-        ? parseInt(newExpense.daily_log_id)
-        : null,
-      project_id: newExpense.project_id
-        ? parseInt(newExpense.project_id)
-        : null,
       engineer_id: newExpense.engineer_id
         ? parseInt(newExpense.engineer_id)
         : null,
@@ -75,7 +98,6 @@ function AddExpense() {
           expense_details: "",
           amount: "",
           daily_log_id: "",
-          project_id: "",
           engineer_id: "",
           is_billable: false,
           status1: false,
@@ -93,9 +115,14 @@ function AddExpense() {
     }
   };
 
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return format(date, "MM-dd-yy");
+  };
+
   return (
     <form onSubmit={handleAddExpense} className="container mt-5">
-      <h2>Add Expense</h2>
+      <h2>Add Expense for {projectTitle}</h2>
       <div className="form-group">
         <label>Expense Date</label>
         <input
@@ -147,26 +174,31 @@ function AddExpense() {
         />
       </div>
       <div className="form-group">
-        <label>Daily Log ID</label>
+        <label>Select Date for Daily Log</label>
         <input
-          type="text"
-          name="daily_log_id"
-          value={newExpense.daily_log_id}
-          onChange={handleNewExpenseChange}
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
           className="form-control"
           required
         />
       </div>
       <div className="form-group">
-        <label>Project ID</label>
-        <input
-          type="text"
-          name="project_id"
-          value={newExpense.project_id}
+        <label>Daily Log</label>
+        <select
+          name="daily_log_id"
+          value={newExpense.daily_log_id}
           onChange={handleNewExpenseChange}
           className="form-control"
           required
-        />
+        >
+          <option value="">Select Daily Log</option>
+          {dailyLogs.map((log) => (
+            <option key={log.daily_log_id} value={log.daily_log_id}>
+              {formatDate(log.log_date)} - {log.engineer_name}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="form-group">
         <label>Engineer</label>
