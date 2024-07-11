@@ -6,7 +6,7 @@ const DailyLogs = () => {
   let ip = "http://localhost:3000";
   const [dailyLogs, setDailyLogs] = useState([]);
   const [projectTitle, setProjectTitle] = useState("");
-  // const { projectId, action } = useParams(); query pass
+  const [markedForDeletion, setMarkedForDeletion] = useState([]);
   const navigate = useNavigate();
 
   const location = useLocation();
@@ -16,6 +16,7 @@ const DailyLogs = () => {
     async function fetchDailyLogs() {
       if (!isAuthenticated) {
         navigate("/unauthorized");
+        return;
       }
       try {
         const response = await axios.post(`${ip}/dailyLogs`, {
@@ -31,6 +32,7 @@ const DailyLogs = () => {
         console.error("Error fetching daily logs:", error);
       }
     }
+
     async function fetchProjectName() {
       try {
         const response = await axios.post(`${ip}/title`, {
@@ -45,9 +47,10 @@ const DailyLogs = () => {
         console.error("Error fetching project name:", error);
       }
     }
+
     fetchDailyLogs();
     fetchProjectName();
-  }, [projectId, action]);
+  }, [projectId, action, isAuthenticated, navigate]);
 
   function handleAddDailyLog() {
     navigate("/addDailyLog", {
@@ -58,10 +61,43 @@ const DailyLogs = () => {
       },
     });
   }
+
+  function handleDeleteClick(log) {
+    if (markedForDeletion.includes(log.daily_log_id)) {
+      setMarkedForDeletion(
+        markedForDeletion.filter((id) => id !== log.daily_log_id)
+      );
+    } else {
+      setMarkedForDeletion([...markedForDeletion, log.daily_log_id]);
+    }
+  }
+
+  async function confirmDelete() {
+    try {
+      await axios.post(`${ip}/deleteMarkedDailyLogs`, {
+        dailyLogIds: markedForDeletion,
+      });
+      setMarkedForDeletion([]);
+      const response = await axios.post(`${ip}/dailyLogs`, {
+        project_id: projectId,
+        action: action,
+      });
+
+      if (response.status === 200) {
+        setDailyLogs(response.data);
+      }
+    } catch (error) {
+      console.error("Error confirming delete:", error);
+    }
+  }
+
   return (
     <div className="container mt-5" id="daily-logs">
       <h1>Daily Logs Report for {projectTitle}</h1>
-      <button onClick={handleAddDailyLog}>Add Daily Log</button>
+      <div className="subheading">
+        <button onClick={handleAddDailyLog}>Add Daily Log</button>
+        <button onClick={confirmDelete}>Confirm Delete</button>
+      </div>
       <table className="table mt-3">
         <thead>
           <tr>
@@ -73,12 +109,20 @@ const DailyLogs = () => {
             <th>Submitted Billing</th>
             <th>Hours</th>
             <th>PDF</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {dailyLogs.length > 0 ? (
             dailyLogs.map((log) => (
-              <tr key={log.daily_log_id}>
+              <tr
+                key={log.daily_log_id}
+                className={
+                  markedForDeletion.includes(log.daily_log_id)
+                    ? "red-slash"
+                    : ""
+                }
+              >
                 <td>{log.daily_log_id}</td>
                 <td>{log.log_date}</td>
                 <td>{log.project_name}</td>
@@ -103,11 +147,18 @@ const DailyLogs = () => {
                     PDF
                   </a>
                 </td>
+                <td>
+                  <button onClick={() => handleDeleteClick(log)}>
+                    {markedForDeletion.includes(log.daily_log_id)
+                      ? "Undo"
+                      : "Delete"}
+                  </button>
+                </td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="8" className="text-center">
+              <td colSpan="10" className="text-center">
                 No logs available
               </td>
             </tr>

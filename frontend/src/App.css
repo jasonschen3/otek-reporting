@@ -134,3 +134,8 @@ nav a:hover {
   display: flex;
   justify-content: space-between;
 }
+
+.red-slash {
+  text-decoration: line-through;
+  color: red;
+}

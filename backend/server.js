@@ -573,11 +573,11 @@ app.post("/addDailyLog", async (req, res) => {
   }
 });
 
-// Fix
 app.post("/addExpense", async (req, res) => {
   const {
     project_id,
     engineer_id,
+    daily_log_id,
     expense_date,
     expense_type,
     expense_details,
@@ -588,8 +588,6 @@ app.post("/addExpense", async (req, res) => {
     status3,
     pdf_url,
   } = req.body;
-
-  const daily_log_id = req.body.daily_log_id;
 
   try {
     const result = await db.query(
@@ -628,6 +626,72 @@ app.post("/addExpense", async (req, res) => {
   } catch (err) {
     console.error("Error adding expense:", err);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Delete
+app.post("/deleteMarkedExpenses", async (req, res) => {
+  const { expenseIds } = req.body;
+
+  try {
+    const result = await db.query(
+      // ANY(id::int[]) checks if id is in int[]
+      `DELETE FROM expenses WHERE expense_id = ANY($1::int[]) RETURNING *`,
+      [expenseIds]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error deleting expenses:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/deleteMarkedDailyLogs", async (req, res) => {
+  const { dailyLogIds } = req.body;
+
+  try {
+    const result = await db.query(
+      `DELETE FROM daily_logs WHERE daily_log_id = ANY($1::int[]) RETURNING *`,
+      [dailyLogIds]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error deleting daily logs:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/deleteMarkedDailyLogs", async (req, res) => {
+  const { dailyLogIds } = req.body;
+
+  try {
+    const result = await db.query(
+      `DELETE FROM daily_logs WHERE daily_log_id = ANY($1::int[]) RETURNING *`,
+      [dailyLogIds]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error deleting daily logs:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/deleteMarkedProjects", async (req, res) => {
+  const { projectIds } = req.body;
+
+  try {
+    const result = await db.query(
+      `DELETE FROM projects WHERE project_id = ANY($1::int[]) RETURNING *`,
+      [projectIds]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error deleting projects:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 

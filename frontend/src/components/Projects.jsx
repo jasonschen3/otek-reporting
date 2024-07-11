@@ -7,6 +7,7 @@ function Projects() {
   const [projects, setProjects] = useState([]);
   const [editProject, setEditProject] = useState(null);
   const [displayingMessage, setDisplayingMessage] = useState("");
+  const [markedForDeletion, setMarkedForDeletion] = useState([]);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -93,8 +94,6 @@ function Projects() {
         } else {
           setDisplayingMessage("Nothing");
         }
-        // window.location.href = "/projects"; Causes a full reload
-        // Reload the projects data without reloading the page
         await axios.get(`${ip}/projects`).then((res) => {
           setProjects(res.data);
         });
@@ -106,10 +105,7 @@ function Projects() {
     }
   };
 
-  // use url
   const navigateToDailyLogs = (projectId, action) => {
-    // navigate(`/dailyLogs/${projectId}/${action}`);
-    // Changed to state for more security
     navigate("/dailyLogs", {
       state: {
         projectId,
@@ -119,11 +115,37 @@ function Projects() {
     });
   };
 
-  // use state
   const navigateToExpenses = (project, action) => {
     navigate("/expenses", {
       state: { project, action, isAuthenticated: true },
     });
+  };
+
+  const handleDeleteClick = (project) => {
+    if (markedForDeletion.includes(project.project_id)) {
+      setMarkedForDeletion(
+        markedForDeletion.filter((id) => id !== project.project_id)
+      );
+    } else {
+      setMarkedForDeletion([...markedForDeletion, project.project_id]);
+    }
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await axios.post(`${ip}/deleteMarkedProjects`, {
+        projectIds: markedForDeletion,
+      });
+      setMarkedForDeletion([]);
+      const response = await axios.get(`${ip}/projects`);
+      if (response.status === 200) {
+        setProjects(response.data);
+      } else {
+        console.error("Failed to fetch updated projects");
+      }
+    } catch (error) {
+      console.error("Error deleting projects:", error);
+    }
   };
 
   return (
@@ -142,7 +164,10 @@ function Projects() {
           <button type="submit">Display</button>
           <div>Currently Displaying: {displayingMessage}</div>
         </form>
-        <button onClick={handleAddProject}>Add Project</button>
+        <div>
+          <button onClick={handleAddProject}>Add Project</button>
+          <button onClick={confirmDelete}>Confirm Delete</button>
+        </div>
       </div>
       <table className="table mt-3">
         <thead>
@@ -163,7 +188,14 @@ function Projects() {
         </thead>
         <tbody>
           {projects.map((project) => (
-            <tr key={project.project_id}>
+            <tr
+              key={project.project_id}
+              className={
+                markedForDeletion.includes(project.project_id)
+                  ? "red-slash"
+                  : ""
+              }
+            >
               <td>{project.project_id}</td>
               <td>{project.project_name}</td>
               <td>{project.project_status === 1 ? "Ongoing" : "Complete"}</td>
@@ -219,6 +251,11 @@ function Projects() {
               <td>{project.notifications}</td>
               <td>
                 <button onClick={() => handleEditClick(project)}>Edit</button>
+                <button onClick={() => handleDeleteClick(project)}>
+                  {markedForDeletion.includes(project.project_id)
+                    ? "Undo"
+                    : "Delete"}
+                </button>
               </td>
             </tr>
           ))}
@@ -226,7 +263,7 @@ function Projects() {
       </table>
       {editProject && (
         <div className="edit-form">
-          <h2>Edit Project</h2>
+          <h2>Edit Project {editProject.project_id}</h2>
           <form>
             <div className="form-group">
               <label>Project Name</label>

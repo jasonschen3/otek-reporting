@@ -93,7 +93,6 @@ function AddExpense() {
       status2: newExpense.status2 ? 1 : 0,
       status3: newExpense.status3 ? 1 : 0,
     };
-
     try {
       const response = await axios.post(`${ip}/addExpense`, expenseData);
       if (response.status === 200) {

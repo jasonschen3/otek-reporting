@@ -19,7 +19,7 @@ function AddProject() {
 
   const nav = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = location.state || {}; // NOT A FUNCTION
+  const { isAuthenticated } = location.state || {};
 
   useEffect(() => {
     if (!isAuthenticated) {
