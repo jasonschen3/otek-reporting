@@ -76,13 +76,10 @@ function Projects() {
     const completed = document.getElementById("completedCheckbox").checked;
 
     try {
-      const response = await axios.post(
-        "http://localhost:3000/updateProjectDisplay",
-        {
-          ongoing: ongoing,
-          completed: completed,
-        }
-      );
+      const response = await axios.post(`${ip}/updateProjectDisplay`, {
+        ongoing: ongoing,
+        completed: completed,
+      });
 
       if (response.status === 200) {
         if (ongoing && completed) {

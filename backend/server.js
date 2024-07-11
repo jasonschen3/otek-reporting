@@ -469,6 +469,24 @@ app.post("/updateProjectEngineers", async (req, res) => {
   }
 });
 
+// Toggle what to display based on status
+app.post("/updateProjectDisplay", async (req, res) => {
+  console.log("Update posted");
+  const ongoing = req.body.ongoing;
+  const completed = req.body.completed;
+  if (ongoing && completed) {
+    projectDisplayStatus = 3; // display all
+  } else if (ongoing) {
+    projectDisplayStatus = 1; // display ongoing
+  } else if (completed) {
+    projectDisplayStatus = 2; // display completed
+  } else {
+    projectDisplayStatus = 0; // display none
+  }
+
+  res.redirect("/projects");
+});
+
 // Title functionality
 app.post("/title", async (req, res) => {
   const { project_id } = req.body;
