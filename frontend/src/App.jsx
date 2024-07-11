@@ -11,6 +11,7 @@ import Expenses from "./components/Expenses";
 import AddExpense from "./components/AddExpense";
 import AddDailyLog from "./components/AddDailyLog";
 import Unauthorized from "./components/Unauthorized";
+import EditEngineers from "./components/EditEngineers";
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
         <Route path="/expenses" element={<Expenses />}></Route>
         <Route path="/addExpense" element={<AddExpense />}></Route>
         <Route path="/unauthorized" element={<Unauthorized />}></Route>
+        <Route path="/editEngineers" element={<EditEngineers />}></Route>
       </Routes>
     </BrowserRouter>
   );

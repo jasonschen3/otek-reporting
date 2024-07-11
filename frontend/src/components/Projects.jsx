@@ -148,6 +148,12 @@ function Projects() {
     }
   };
 
+  const navigateToEditEngineers = (project) => {
+    navigate("/editEngineers", {
+      state: { project, isAuthenticated: true },
+    });
+  };
+
   return (
     <div className="container mt-5">
       <h1>Projects Report</h1>
@@ -165,7 +171,7 @@ function Projects() {
           <div>Currently Displaying: {displayingMessage}</div>
         </form>
         <div>
-          <button onClick={handleAddProject}>Add Project</button>
+          <button onClick={handleAddProject}>Add Project</button>{" "}
           <button onClick={confirmDelete}>Confirm Delete</button>
         </div>
       </div>
@@ -251,6 +257,9 @@ function Projects() {
               <td>{project.notifications}</td>
               <td>
                 <button onClick={() => handleEditClick(project)}>Edit</button>
+                <button onClick={() => navigateToEditEngineers(project)}>
+                  Edit Engineers
+                </button>
                 <button onClick={() => handleDeleteClick(project)}>
                   {markedForDeletion.includes(project.project_id)
                     ? "Undo"

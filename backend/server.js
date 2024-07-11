@@ -133,7 +133,6 @@ app.get("/", async (req, res) => {
 app.get("/projects", async (req, res) => {
   try {
     await updateCompanyInfo();
-    console.log(projectsInfo);
     res.json(projectsInfo);
   } catch (error) {
     console.error("Error updating company info:", error);
@@ -261,7 +260,7 @@ app.post("/expenses", async (req, res) => {
   res.json(expensesInfo);
 });
 
-app.post("/updateProjectDisplay", async (req, res) => {
+app.post("/editProjectDisplay", async (req, res) => {
   console.log("Update posted");
   const { ongoing, completed } = req.body;
 
@@ -282,7 +281,7 @@ app.post("/updateProjectDisplay", async (req, res) => {
 });
 
 // Toggle what to display based on status
-app.post("/updateProjectDisplay", async (req, res) => {
+app.post("/editProjectDisplay", async (req, res) => {
   console.log("Update posted");
   const ongoing = req.body.ongoing;
   const completed = req.body.completed;
@@ -395,7 +394,7 @@ passport.deserializeUser(async (id, cb) => {
 });
 
 // Edit functionality
-app.post("/updateProject", async (req, res) => {
+app.post("/editProject", async (req, res) => {
   const {
     project_id,
     project_name,
@@ -425,6 +424,47 @@ app.post("/updateProject", async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error("Error updating project:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get("/projects_assign_engineers", async (req, res) => {
+  const { project_id } = req.query;
+
+  try {
+    const result = await db.query(
+      `SELECT engineer_id FROM projects_assign_engineers WHERE project_id = $1`,
+      [project_id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching assigned engineers:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/updateProjectEngineers", async (req, res) => {
+  const { project_id, engineer_ids } = req.body;
+
+  // console.log("pae backend", req.body);
+  try {
+    // Delete all existing engineer assignments for the project
+    const deleteQuery = await db.query(
+      `DELETE FROM projects_assign_engineers WHERE project_id = $1 RETURNING *`,
+      [project_id]
+    );
+    console.log("Deleted,", deleteQuery.rows);
+    // Insert the new engineer assignments
+    for (const engineer_id of engineer_ids) {
+      const inserted = await db.query(
+        `INSERT INTO projects_assign_engineers (project_id, engineer_id) VALUES ($1, $2) RETURNING *`,
+        [project_id, engineer_id]
+      );
+      console.log("inserted ", inserted.rows);
+    }
+
+    res.json({ message: "Engineers updated successfully" });
+  } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -462,8 +502,8 @@ app.get("/engineers", async (req, res) => {
 // Fetch Daily Logs for a specific project based on id and date and returns logs with same id and engineer name
 app.get("/dailyLogs", async (req, res) => {
   const { projectId, date } = req.query;
-  console.log(projectId, " Project id");
-  console.log(date, " date");
+  // console.log(projectId, " Project id");
+  // console.log(date, " date");
   try {
     const result = await db.query(
       `SELECT dl.*, e.name as engineer_name FROM daily_logs dl
@@ -675,22 +715,6 @@ app.post("/deleteMarkedDailyLogs", async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error("Error deleting daily logs:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-app.post("/deleteMarkedProjects", async (req, res) => {
-  const { projectIds } = req.body;
-
-  try {
-    const result = await db.query(
-      `DELETE FROM projects WHERE project_id = ANY($1::int[]) RETURNING *`,
-      [projectIds]
-    );
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error("Error deleting projects:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
