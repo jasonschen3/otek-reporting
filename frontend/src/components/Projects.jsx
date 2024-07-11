@@ -32,6 +32,13 @@ function Projects() {
 
   const handleEditClick = (project) => {
     setEditProject({ ...project });
+    // Scroll to the edit project form
+    setTimeout(() => {
+      const element = document.getElementById("editProject");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 0);
   };
 
   const handleChange = (e) => {
@@ -268,7 +275,7 @@ function Projects() {
         </tbody>
       </table>
       {editProject && (
-        <div className="edit-form">
+        <div id="editProject" className="edit-form">
           <h2>Edit Project {editProject.project_id}</h2>
           <form>
             <div className="form-group">

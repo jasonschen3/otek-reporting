@@ -94,6 +94,13 @@ const DailyLogs = () => {
 
   function handleEditClick(log) {
     setEditDailyLog({ ...log });
+    // Scroll to the edit project form
+    setTimeout(() => {
+      const element = document.getElementById("editLog");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 0);
   }
 
   function handleChange(event) {
@@ -203,7 +210,7 @@ const DailyLogs = () => {
       </table>
 
       {editDailyLog && (
-        <div className="edit-form">
+        <div id="editLog" className="edit-form">
           <h2>Edit Daily Log {editDailyLog.daily_log_id}</h2>
           <form>
             <div className="form-group">

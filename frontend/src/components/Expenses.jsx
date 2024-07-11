@@ -48,6 +48,13 @@ const Expenses = () => {
 
   function handleEditClick(expense) {
     setEditExpense({ ...expense });
+    // Scroll to the edit project form
+    setTimeout(() => {
+      const element = document.getElementById("editExpense");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 0);
   }
 
   function handleDeleteClick(expense) {
@@ -204,7 +211,7 @@ const Expenses = () => {
       </table>
 
       {editExpense && (
-        <div className="edit-form">
+        <div id="editExpense" className="edit-form">
           <h2>Edit Expense {editExpense.expense_id}</h2>
           <form>
             <div className="form-group">
