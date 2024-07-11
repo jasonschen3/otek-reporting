@@ -6,6 +6,7 @@ const DailyLogs = () => {
   let ip = "http://localhost:3000";
   const [dailyLogs, setDailyLogs] = useState([]);
   const [projectTitle, setProjectTitle] = useState("");
+  const [editDailyLog, setEditDailyLog] = useState(null);
   const [markedForDeletion, setMarkedForDeletion] = useState([]);
   const navigate = useNavigate();
 
@@ -91,6 +92,40 @@ const DailyLogs = () => {
     }
   }
 
+  function handleEditClick(log) {
+    setEditDailyLog({ ...log });
+  }
+
+  function handleChange(event) {
+    const { name, value } = event.target;
+    setEditDailyLog({
+      ...editDailyLog,
+      [name]: value === "" ? null : value,
+    });
+  }
+
+  const handleSave = async (log) => {
+    try {
+      const response = await axios.post(`${ip}/editDailyLog`, {
+        ...editDailyLog,
+      });
+
+      if (response.status === 200) {
+        setDailyLogs(
+          dailyLogs.map((log) =>
+            log.daily_log_id === editDailyLog.daily_log_id ? response.data : log
+          )
+        );
+        setEditDailyLog(null);
+        window.location.href = "/dailyLogs";
+      } else {
+        console.error("Failed to update daily log");
+      }
+    } catch (error) {
+      console.error("Error updating daily log:", error);
+    }
+  };
+
   return (
     <div className="container mt-5" id="daily-logs">
       <h1>Daily Logs Report for {projectTitle}</h1>
@@ -148,6 +183,7 @@ const DailyLogs = () => {
                   </a>
                 </td>
                 <td>
+                  <button onClick={() => handleEditClick(log)}>Edit</button>
                   <button onClick={() => handleDeleteClick(log)}>
                     {markedForDeletion.includes(log.daily_log_id)
                       ? "Undo"
@@ -165,6 +201,75 @@ const DailyLogs = () => {
           )}
         </tbody>
       </table>
+
+      {editDailyLog && (
+        <div className="edit-form">
+          <h2>Edit Daily Log {editDailyLog.daily_log_id}</h2>
+          <form>
+            <div className="form-group">
+              <label>Log Date</label>
+              <input
+                type="date"
+                name="log_date"
+                value={editDailyLog.log_date}
+                onChange={handleChange}
+                className="form-control"
+              />
+            </div>
+            <div className="form-group">
+              <label>Submitted</label>
+              <select
+                name="status_submitted"
+                value={editDailyLog.status_submitted}
+                onChange={handleChange}
+                className="form-control"
+              >
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Submitted Billing</label>
+              <select
+                name="status_reimbursed"
+                value={editDailyLog.status_reimbursed}
+                onChange={handleChange}
+                className="form-control"
+              >
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Hours</label>
+              <input
+                type="number"
+                name="hours"
+                value={editDailyLog.hours}
+                onChange={handleChange}
+                className="form-control"
+              />
+            </div>
+            <div className="form-group">
+              <label>PDF URL</label>
+              <input
+                type="text"
+                name="pdf_url"
+                value={editDailyLog.pdf_url}
+                onChange={handleChange}
+                className="form-control"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="btn btn-primary"
+            >
+              Save
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

@@ -281,7 +281,7 @@ app.post("/editProjectDisplay", async (req, res) => {
 });
 
 // Toggle what to display based on status
-app.post("/editProjectDisplay", async (req, res) => {
+app.post("/updateProjectDisplay", async (req, res) => {
   console.log("Update posted");
   const ongoing = req.body.ongoing;
   const completed = req.body.completed;
@@ -420,7 +420,7 @@ app.post("/editProject", async (req, res) => {
         project_id,
       ]
     );
-    console.log(result.rows[0]);
+    // console.log(result.rows[0]);
     res.json(result.rows[0]);
   } catch (error) {
     console.error("Error updating project:", error);
@@ -469,22 +469,70 @@ app.post("/updateProjectEngineers", async (req, res) => {
   }
 });
 
-// Toggle what to display based on status
-app.post("/updateProjectDisplay", async (req, res) => {
-  console.log("Update posted");
-  const ongoing = req.body.ongoing;
-  const completed = req.body.completed;
-  if (ongoing && completed) {
-    projectDisplayStatus = 3; // display all
-  } else if (ongoing) {
-    projectDisplayStatus = 1; // display ongoing
-  } else if (completed) {
-    projectDisplayStatus = 2; // display completed
-  } else {
-    projectDisplayStatus = 0; // display none
-  }
+app.post("/editExpense", async (req, res) => {
+  const {
+    expense_id,
+    expense_date,
+    expense_type,
+    expense_details,
+    amount,
+    is_billable,
+    status1,
+    status2,
+    status3,
+    pdf_url,
+  } = req.body;
 
-  res.redirect("/projects");
+  try {
+    const result = await db.query(
+      `UPDATE expenses SET expense_date = $1, expense_type = $2, expense_details = $3, amount = $4, is_billable = $5, status1 = $6, status2 = $7, status3 = $8, pdf_url = $9 WHERE expense_id = $10 RETURNING *`,
+      [
+        expense_date,
+        expense_type,
+        expense_details,
+        amount,
+        is_billable,
+        status1,
+        status2,
+        status3,
+        pdf_url,
+        expense_id,
+      ]
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error updating expense:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/editDailyLog", async (req, res) => {
+  const {
+    log_date,
+    status_submitted,
+    status_reimbursed,
+    hours,
+    pdf_url,
+    daily_log_id,
+  } = req.body;
+
+  try {
+    const result = await db.query(
+      `UPDATE daily_logs SET log_date = $1, status_submitted = $2, status_reimbursed = $3, hours = $4, pdf_url = $5 WHERE daily_log_id = $6 RETURNING *`,
+      [
+        log_date,
+        status_submitted,
+        status_reimbursed,
+        hours,
+        pdf_url,
+        daily_log_id,
+      ]
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error updating daily log:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 // Title functionality

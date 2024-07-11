@@ -48,7 +48,7 @@ function Projects() {
 
   const handleSave = async () => {
     try {
-      const response = await axios.post(`${ip}/updateProject`, {
+      const response = await axios.post(`${ip}/editProject`, {
         ...editProject,
       });
 
@@ -291,7 +291,6 @@ function Projects() {
               >
                 <option value={1}>Ongoing</option>
                 <option value={0}>Complete</option>
-                <option value={null}>None</option>
               </select>
             </div>
             <div className="form-group">

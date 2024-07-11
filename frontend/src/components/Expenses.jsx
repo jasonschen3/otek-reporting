@@ -6,6 +6,7 @@ const Expenses = () => {
   let ip = "http://localhost:3000";
   const [expenses, setExpenses] = useState([]);
   const [markedForDeletion, setMarkedForDeletion] = useState([]);
+  const [editExpense, setEditExpense] = useState(null);
   const location = useLocation();
   const { project, action, isAuthenticated } = location.state || {};
   const navigate = useNavigate();
@@ -46,17 +47,15 @@ const Expenses = () => {
   }
 
   function handleEditClick(expense) {
-    // TODO: Implement edit functionality
+    setEditExpense({ ...expense });
   }
 
   function handleDeleteClick(expense) {
     if (markedForDeletion.includes(expense.expense_id)) {
-      // Filter creates a new array excluding the expense_id to be removed
       setMarkedForDeletion(
         markedForDeletion.filter((id) => id !== expense.expense_id)
       );
     } else {
-      // Spread operator creates new arr that includes new expense_id
       setMarkedForDeletion([...markedForDeletion, expense.expense_id]);
     }
   }
@@ -79,6 +78,38 @@ const Expenses = () => {
       console.error("Error confirming delete:", error);
     }
   }
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setEditExpense({
+      ...editExpense,
+      [name]: value === "" ? null : value,
+    });
+  };
+
+  const handleSave = async () => {
+    try {
+      const response = await axios.post(`${ip}/editExpense`, {
+        ...editExpense,
+      });
+
+      if (response.status === 200) {
+        setExpenses(
+          expenses.map((expense) =>
+            expense.expense_id === editExpense.expense_id
+              ? response.data
+              : expense
+          )
+        );
+        setEditExpense(null);
+        window.location.href = "/expenses";
+      } else {
+        console.error("Failed to update expense");
+      }
+    } catch (error) {
+      console.error("Error updating expense:", error);
+    }
+  };
 
   return (
     <div className="container mt-5" id="expenses">
@@ -171,6 +202,125 @@ const Expenses = () => {
           )}
         </tbody>
       </table>
+
+      {editExpense && (
+        <div className="edit-form">
+          <h2>Edit Expense {editExpense.expense_id}</h2>
+          <form>
+            <div className="form-group">
+              <label>Expense Date</label>
+              <input
+                type="date"
+                name="expense_date"
+                value={editExpense.expense_date}
+                onChange={handleChange}
+                className="form-control"
+              />
+            </div>
+            <div className="form-group">
+              <label>Expense Type</label>
+              <select
+                name="expense_type"
+                value={editExpense.expense_type}
+                onChange={handleChange}
+                className="form-control"
+              >
+                <option value={0}>tools</option>
+                <option value={1}>transportation</option>
+                <option value={2}>meals</option>
+                <option value={3}>medical</option>
+                <option value={4}>accommodation</option>
+                <option value={5}>misc</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Expense Details</label>
+              <input
+                type="text"
+                name="expense_details"
+                value={editExpense.expense_details}
+                onChange={handleChange}
+                className="form-control"
+              />
+            </div>
+            <div className="form-group">
+              <label>Amount</label>
+              <input
+                type="number"
+                name="amount"
+                value={editExpense.amount}
+                onChange={handleChange}
+                className="form-control"
+              />
+            </div>
+            <div className="form-group">
+              <label>Is Billable</label>
+              <select
+                name="is_billable"
+                value={editExpense.is_billable}
+                onChange={handleChange}
+                className="form-control"
+              >
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Status 1</label>
+              <select
+                name="status1"
+                value={editExpense.status1}
+                onChange={handleChange}
+                className="form-control"
+              >
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Status 2</label>
+              <select
+                name="status2"
+                value={editExpense.status2}
+                onChange={handleChange}
+                className="form-control"
+              >
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Status 3</label>
+              <select
+                name="status3"
+                value={editExpense.status3}
+                onChange={handleChange}
+                className="form-control"
+              >
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>PDF URL</label>
+              <input
+                type="text"
+                name="pdf_url"
+                value={editExpense.pdf_url}
+                onChange={handleChange}
+                className="form-control"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="btn btn-primary"
+            >
+              Save
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 };
