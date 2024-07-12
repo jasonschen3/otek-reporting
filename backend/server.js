@@ -769,18 +769,18 @@ app.post("/deleteMarkedDailyLogs", async (req, res) => {
   }
 });
 
-app.post("/deleteMarkedDailyLogs", async (req, res) => {
-  const { dailyLogIds } = req.body;
+app.post("/deleteMarkedProjects", async (req, res) => {
+  const { projectIds } = req.body;
 
   try {
     const result = await db.query(
-      `DELETE FROM daily_logs WHERE daily_log_id = ANY($1::int[]) RETURNING *`,
-      [dailyLogIds]
+      `DELETE FROM projects WHERE project_id = ANY($1::int[]) RETURNING *`,
+      [projectIds]
     );
 
     res.json(result.rows);
   } catch (error) {
-    console.error("Error deleting daily logs:", error);
+    console.error("Error deleting projects:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
