@@ -3,11 +3,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 function Projects() {
-  let ip = "http://localhost:3000";
+  let ip = "http://35.87.99.183:3001";
   const [projects, setProjects] = useState([]);
   const [editProject, setEditProject] = useState(null);
   const [displayingMessage, setDisplayingMessage] = useState("");
   const [markedForDeletion, setMarkedForDeletion] = useState([]);
+
+  const [deleteMessage, setDeleteMessage] = useState("");
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -148,7 +150,12 @@ function Projects() {
         console.error("Failed to fetch updated projects");
       }
     } catch (error) {
-      console.error("Error deleting projects:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("Error confirming delete:", error.message);
+        setDeleteMessage("Must delete expenses and daily logs first");
+      } else {
+        console.error("Unexpected error:", error);
+      }
     }
   };
 
@@ -177,6 +184,7 @@ function Projects() {
         <div>
           <button onClick={handleAddProject}>Add Project</button>{" "}
           <button onClick={confirmDelete}>Confirm Delete</button>
+          <div>{deleteMessage}</div>
         </div>
       </div>
       <table className="table mt-3">

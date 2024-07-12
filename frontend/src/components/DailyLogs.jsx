@@ -10,6 +10,8 @@ const DailyLogs = () => {
   const [markedForDeletion, setMarkedForDeletion] = useState([]);
   const navigate = useNavigate();
 
+  const [deleteMessage, setDeleteMessage] = useState("");
+
   const location = useLocation();
   const { projectId, action, isAuthenticated } = location.state || {};
 
@@ -88,7 +90,12 @@ const DailyLogs = () => {
         setDailyLogs(response.data);
       }
     } catch (error) {
-      console.error("Error confirming delete:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("Error confirming delete:", error.message);
+        setDeleteMessage("Selected daily log linked to expense(s).");
+      } else {
+        console.error("Unexpected error:", error);
+      }
     }
   }
 
@@ -138,7 +145,10 @@ const DailyLogs = () => {
       <h1>Daily Logs Report for {projectTitle}</h1>
       <div className="subheading">
         <button onClick={handleAddDailyLog}>Add Daily Log</button>
-        <button onClick={confirmDelete}>Confirm Delete</button>
+        <div>
+          {deleteMessage}
+          <button onClick={confirmDelete}>Confirm Delete</button>
+        </div>
       </div>
       <table className="table mt-3">
         <thead>
