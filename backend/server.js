@@ -773,13 +773,28 @@ app.post("/deleteMarkedProjects", async (req, res) => {
   const { projectIds } = req.body;
 
   try {
+    // Begin transaction
+    await db.query("BEGIN");
+
+    // Delete related entries in projects_assign_engineers
+    await db.query(
+      `DELETE FROM projects_assign_engineers WHERE project_id = ANY($1::int[])`,
+      [projectIds]
+    );
+
+    // Delete projects
     const result = await db.query(
       `DELETE FROM projects WHERE project_id = ANY($1::int[]) RETURNING *`,
       [projectIds]
     );
 
+    // Commit transaction
+    await db.query("COMMIT");
+
     res.json(result.rows);
   } catch (error) {
+    // Rollback transaction on error
+    await db.query("ROLLBACK");
     console.error("Error deleting projects:", error);
     res.status(500).json({ message: "Server error" });
   }
