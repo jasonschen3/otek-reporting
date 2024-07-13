@@ -341,6 +341,7 @@ app.post("/register", async (req, res) => {
 
 // Login route
 app.post("/login", passport.authenticate("local"), (req, res) => {
+  projectDisplayStatus = 1;
   res.status(200).json({ message: "Login successful" });
 });
 
@@ -617,7 +618,7 @@ app.post("/addProject", async (req, res) => {
     );
 
     const newProject = newProjectResult.rows[0];
-    // console.log(newProject);
+    console.log(newProject);
 
     // Insert the engineer assignments into the projects_assign_engineers table
     const engineerAssignments = engineer_ids.map((engineer_id) => {

@@ -73,9 +73,9 @@ function Login() {
               ) : (
                 <p></p>
               )}
-              <Link to="/register" className="btn btn-info b-110">
+              {/* <Link to="/register" className="btn btn-info b-110">
                 Register
-              </Link>
+              </Link> */}
             </div>
           </div>
         </div>

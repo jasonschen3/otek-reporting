@@ -3,12 +3,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 function Projects() {
-  let ip = "http://35.87.99.183:3001";
+  let ip = "http://localhost:3000";
   const [projects, setProjects] = useState([]);
   const [editProject, setEditProject] = useState(null);
-  const [displayingMessage, setDisplayingMessage] = useState("");
+  const [displayingMessage, setDisplayingMessage] = useState("Ongoing");
   const [markedForDeletion, setMarkedForDeletion] = useState([]);
-
   const [deleteMessage, setDeleteMessage] = useState("");
 
   const navigate = useNavigate();
@@ -17,7 +16,10 @@ function Projects() {
   useEffect(() => {
     if (location.state?.isAuthenticated) {
       axios
-        .get(`${ip}/projects`)
+        .post(`${ip}/updateProjectDisplay`, { ongoing: true, completed: false })
+        .then((res) => {
+          return axios.get(`${ip}/projects`);
+        })
         .then((res) => {
           setProjects(res.data);
         })
@@ -171,7 +173,12 @@ function Projects() {
       <div className="subheading">
         <form onSubmit={handleUpdateProjectDisplay}>
           <label>
-            <input type="checkbox" name="ongoing" id="ongoingCheckbox" />
+            <input
+              type="checkbox"
+              name="ongoing"
+              id="ongoingCheckbox"
+              defaultChecked
+            />
             Ongoing
           </label>
           <label>
