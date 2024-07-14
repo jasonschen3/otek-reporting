@@ -13,6 +13,7 @@ function EditEngineers() {
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/unauthorized");
+      return;
     }
     axios
       .get(`${ip}/engineers`)
@@ -23,13 +24,15 @@ function EditEngineers() {
         console.error("There was an error fetching the engineers data!", error);
       });
 
-    // Optional if you want to add prechecked
     axios
       .get(`${ip}/projects_assign_engineers`, {
+        // params to pass
         params: { project_id: project.project_id },
       })
       .then((res) => {
-        // setAssignedEngineers(res.data.map((engineer) => engineer.engineer_id));
+        setAssignedEngineers(
+          res.data.map((engineer) => engineer.engineer_id.toString())
+        );
       })
       .catch((error) => {
         console.error(
@@ -37,7 +40,7 @@ function EditEngineers() {
           error
         );
       });
-  }, [project.project_id, navigate]);
+  }, [project.project_id, navigate, isAuthenticated]);
 
   const handleEngineerChange = (e) => {
     const { value, checked } = e.target;
@@ -50,14 +53,10 @@ function EditEngineers() {
 
   const handleSave = async () => {
     try {
-      // ERROR
-      const updatedEngineers = await axios.post(
-        `${ip}/updateProjectEngineers`,
-        {
-          project_id: project.project_id,
-          engineer_ids: assignedEngineers,
-        }
-      );
+      await axios.post(`${ip}/updateProjectEngineers`, {
+        project_id: project.project_id,
+        engineer_ids: assignedEngineers,
+      });
       navigate("/projects", { state: { isAuthenticated: true } });
     } catch (error) {
       console.error("Error updating engineers:", error);
@@ -77,7 +76,7 @@ function EditEngineers() {
                   type="checkbox"
                   className="form-check-input"
                   id={`engineer-${engineer.engineer_id}`}
-                  value={engineer.engineer_id}
+                  value={engineer.engineer_id.toString()}
                   checked={assignedEngineers.includes(
                     engineer.engineer_id.toString()
                   )}

@@ -7,13 +7,10 @@ const DailyLogs = () => {
   const [dailyLogs, setDailyLogs] = useState([]);
   const [projectTitle, setProjectTitle] = useState("");
   const [editDailyLog, setEditDailyLog] = useState(null);
-  const [markedForDeletion, setMarkedForDeletion] = useState([]);
   const navigate = useNavigate();
-
-  const [deleteMessage, setDeleteMessage] = useState("");
-
   const location = useLocation();
-  const { projectId, action, isAuthenticated } = location.state || {};
+  const { projectId, action, isAuthenticated, highlightLogId } =
+    location.state || {};
 
   useEffect(() => {
     async function fetchDailyLogs() {
@@ -65,36 +62,32 @@ const DailyLogs = () => {
     });
   }
 
-  function handleDeleteClick(log) {
-    if (markedForDeletion.includes(log.daily_log_id)) {
-      setMarkedForDeletion(
-        markedForDeletion.filter((id) => id !== log.daily_log_id)
-      );
-    } else {
-      setMarkedForDeletion([...markedForDeletion, log.daily_log_id]);
-    }
-  }
+  async function handleDeleteClick(logId) {
+    const isConfirmed = window.confirm(
+      "Are you sure you want to delete this daily log?"
+    );
+    if (isConfirmed) {
+      try {
+        await axios.post(`${ip}/deleteMarkedDailyLogs`, {
+          dailyLogIds: [logId],
+        });
+        const response = await axios.post(`${ip}/dailyLogs`, {
+          project_id: projectId,
+          action: action,
+        });
 
-  async function confirmDelete() {
-    try {
-      await axios.post(`${ip}/deleteMarkedDailyLogs`, {
-        dailyLogIds: markedForDeletion,
-      });
-      setMarkedForDeletion([]);
-      const response = await axios.post(`${ip}/dailyLogs`, {
-        project_id: projectId,
-        action: action,
-      });
-
-      if (response.status === 200) {
-        setDailyLogs(response.data);
-      }
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("Error confirming delete:", error.message);
-        setDeleteMessage("Selected daily log linked to expense(s).");
-      } else {
-        console.error("Unexpected error:", error);
+        if (response.status === 200) {
+          setDailyLogs(response.data);
+        } else {
+          console.error("Failed to fetch updated daily logs");
+        }
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          alert("Must delete associated expenses first");
+          console.error("Error confirming delete:", error.message);
+        } else {
+          console.error("Unexpected error:", error);
+        }
       }
     }
   }
@@ -118,7 +111,7 @@ const DailyLogs = () => {
     });
   }
 
-  const handleSave = async (log) => {
+  const handleSave = async () => {
     try {
       const response = await axios.post(`${ip}/editDailyLog`, {
         ...editDailyLog,
@@ -145,10 +138,6 @@ const DailyLogs = () => {
       <h1>Daily Logs Report for {projectTitle}</h1>
       <div className="subheading">
         <button onClick={handleAddDailyLog}>Add Daily Log</button>
-        <div>
-          {deleteMessage}
-          <button onClick={confirmDelete}>Confirm Delete</button>
-        </div>
       </div>
       <table className="table mt-3">
         <thead>
@@ -170,9 +159,7 @@ const DailyLogs = () => {
               <tr
                 key={log.daily_log_id}
                 className={
-                  markedForDeletion.includes(log.daily_log_id)
-                    ? "red-slash"
-                    : ""
+                  log.daily_log_id === highlightLogId ? "highlight" : ""
                 }
               >
                 <td>{log.daily_log_id}</td>
@@ -201,10 +188,8 @@ const DailyLogs = () => {
                 </td>
                 <td>
                   <button onClick={() => handleEditClick(log)}>Edit</button>
-                  <button onClick={() => handleDeleteClick(log)}>
-                    {markedForDeletion.includes(log.daily_log_id)
-                      ? "Undo"
-                      : "Delete"}
+                  <button onClick={() => handleDeleteClick(log.daily_log_id)}>
+                    Delete
                   </button>
                 </td>
               </tr>

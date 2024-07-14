@@ -4,7 +4,7 @@ import axios from "axios";
 
 function Login() {
   let ip = "http://localhost:3000";
-  const [username, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const navigate = useNavigate(); // Initialize the navigate function
@@ -44,12 +44,12 @@ function Login() {
             <div className="card-body">
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                  <label htmlFor="email">Email</label>
+                  <label htmlFor="username">Username</label>
                   <input
-                    type="email"
+                    type="text"
                     className="form-control"
                     name="username"
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => setUsername(e.target.value)}
                     value={username}
                   />
                 </div>

@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Expenses = () => {
   let ip = "http://localhost:3000";
   const [expenses, setExpenses] = useState([]);
-  const [markedForDeletion, setMarkedForDeletion] = useState([]);
   const [editExpense, setEditExpense] = useState(null);
   const location = useLocation();
   const { project, action, isAuthenticated } = location.state || {};
@@ -22,7 +21,6 @@ const Expenses = () => {
           project_id: project.project_id,
           action: action,
         });
-
         if (response.status === 200) {
           console.log("Expenses data:", response.data);
           setExpenses(response.data);
@@ -34,7 +32,7 @@ const Expenses = () => {
       }
     }
     fetchExpenses();
-  }, [project, action]);
+  }, [project, action, isAuthenticated, navigate]);
 
   function handleAddExpense() {
     navigate("/addExpense", {
@@ -57,34 +55,46 @@ const Expenses = () => {
     }, 0);
   }
 
-  function handleDeleteClick(expense) {
-    if (markedForDeletion.includes(expense.expense_id)) {
-      setMarkedForDeletion(
-        markedForDeletion.filter((id) => id !== expense.expense_id)
-      );
-    } else {
-      setMarkedForDeletion([...markedForDeletion, expense.expense_id]);
-    }
-  }
+  async function handleDeleteClick(expenseId) {
+    const isConfirmed = window.confirm(
+      "Are you sure you want to delete this expense?"
+    );
+    if (isConfirmed) {
+      try {
+        await axios.post(`${ip}/deleteMarkedExpenses`, {
+          expenseIds: [expenseId],
+        });
+        const response = await axios.post(`${ip}/expenses`, {
+          project_id: project.project_id,
+          action: action,
+        });
 
-  async function confirmDelete() {
-    try {
-      await axios.post(`${ip}/deleteMarkedExpenses`, {
-        expenseIds: markedForDeletion,
-      });
-      setMarkedForDeletion([]);
-      const response = await axios.post(`${ip}/expenses`, {
-        project_id: project.project_id,
-        action: action,
-      });
-
-      if (response.status === 200) {
-        setExpenses(response.data);
+        if (response.status === 200) {
+          setExpenses(response.data);
+        } else {
+          console.error("Failed to fetch updated expenses");
+        }
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          alert("Error confirming delete");
+          console.error("Error confirming delete:", error.message);
+        } else {
+          console.error("Unexpected error:", error);
+        }
       }
-    } catch (error) {
-      console.error("Error confirming delete:", error);
     }
   }
+
+  const handleDailyLogClick = (dailyLogId) => {
+    navigate("/dailyLogs", {
+      state: {
+        projectId: project.project_id,
+        action: "View All",
+        isAuthenticated: true,
+        highlightLogId: dailyLogId,
+      },
+    });
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -124,7 +134,6 @@ const Expenses = () => {
 
       <div className="subheading">
         <button onClick={handleAddExpense}>Add Expense</button>
-        <button onClick={confirmDelete}>Confirm Delete</button>
       </div>
 
       <table className="table mt-3">
@@ -139,9 +148,9 @@ const Expenses = () => {
             <th>Daily Log ID</th>
             <th>Engineer Name</th>
             <th>Is Billable</th>
-            <th>Status 1</th>
-            <th>Status 2</th>
-            <th>Status 3</th>
+            <th>Submitted to Other Company</th>
+            <th>Other Company Paid</th>
+            <th>Reimbursed to Engineer</th>
             <th>PDF</th>
             <th>Actions</th>
           </tr>
@@ -149,14 +158,7 @@ const Expenses = () => {
         <tbody>
           {expenses.length > 0 ? (
             expenses.map((expense) => (
-              <tr
-                key={expense.expense_id}
-                className={
-                  markedForDeletion.includes(expense.expense_id)
-                    ? "red-slash"
-                    : ""
-                }
-              >
+              <tr key={expense.expense_id}>
                 <td>{expense.expense_id}</td>
                 <td>{expense.project_name}</td>
                 <td>{expense.expense_date}</td>
@@ -175,7 +177,15 @@ const Expenses = () => {
                 </td>
                 <td>{expense.expense_details}</td>
                 <td>{expense.amount}</td>
-                <td>{expense.daily_log_id}</td>
+                <td>
+                  <button
+                    onClick={() => handleDailyLogClick(expense.daily_log_id)}
+                    className="btn btn-link"
+                    style={{ padding: 0 }}
+                  >
+                    {expense.daily_log_id}
+                  </button>
+                </td>
                 <td>{expense.engineer_name}</td>
                 <td>{expense.is_billable === "1" ? "Yes" : "No"}</td>
                 <td>{expense.status1 === "1" ? "Yes" : "No"}</td>
@@ -192,10 +202,8 @@ const Expenses = () => {
                 </td>
                 <td>
                   <button onClick={() => handleEditClick(expense)}>Edit</button>
-                  <button onClick={() => handleDeleteClick(expense)}>
-                    {markedForDeletion.includes(expense.expense_id)
-                      ? "Undo"
-                      : "Delete"}
+                  <button onClick={() => handleDeleteClick(expense.expense_id)}>
+                    Delete
                   </button>
                 </td>
               </tr>
@@ -273,7 +281,7 @@ const Expenses = () => {
               </select>
             </div>
             <div className="form-group">
-              <label>Status 1</label>
+              <label>Submitted to Other Company</label>
               <select
                 name="status1"
                 value={editExpense.status1}
@@ -285,7 +293,7 @@ const Expenses = () => {
               </select>
             </div>
             <div className="form-group">
-              <label>Status 2</label>
+              <label>Other Company Paid</label>
               <select
                 name="status2"
                 value={editExpense.status2}
@@ -297,7 +305,7 @@ const Expenses = () => {
               </select>
             </div>
             <div className="form-group">
-              <label>Status 3</label>
+              <label>Reimbursed to Engineer</label>
               <select
                 name="status3"
                 value={editExpense.status3}

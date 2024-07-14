@@ -7,8 +7,8 @@ function Projects() {
   const [projects, setProjects] = useState([]);
   const [editProject, setEditProject] = useState(null);
   const [displayingMessage, setDisplayingMessage] = useState("Ongoing");
-  const [markedForDeletion, setMarkedForDeletion] = useState([]);
-  const [deleteMessage, setDeleteMessage] = useState("");
+  const [entriesStatus, setEntriesStatus] = useState({});
+  const [expensesStatus, setExpensesStatus] = useState({});
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -22,7 +22,35 @@ function Projects() {
         })
         .then((res) => {
           setProjects(res.data);
+          return axios.all([
+            axios.get(`${ip}/projectEntriesStatus?checkExpenses=false`),
+            axios.get(`${ip}/projectEntriesStatus?checkExpenses=true`),
+          ]);
         })
+        .then(
+          axios.spread((entriesRes, expensesRes) => {
+            const entriesStatusData = entriesRes.data.reduce((acc, status) => {
+              acc[status.project_id] = {
+                today: status.today,
+                yesterday: status.yesterday,
+              };
+              return acc;
+            }, {});
+            setEntriesStatus(entriesStatusData);
+
+            const expensesStatusData = expensesRes.data.reduce(
+              (acc, status) => {
+                acc[status.project_id] = {
+                  today: status.today,
+                  yesterday: status.yesterday,
+                };
+                return acc;
+              },
+              {}
+            );
+            setExpensesStatus(expensesStatusData);
+          })
+        )
         .catch((error) => {
           console.error(
             "There was an error fetching the projects data!",
@@ -102,9 +130,42 @@ function Projects() {
         } else {
           setDisplayingMessage("Nothing");
         }
-        await axios.get(`${ip}/projects`).then((res) => {
-          setProjects(res.data);
-        });
+        await axios
+          .get(`${ip}/projects`)
+          .then((res) => {
+            setProjects(res.data);
+            return axios.all([
+              axios.get(`${ip}/projectEntriesStatus?checkExpenses=false`),
+              axios.get(`${ip}/projectEntriesStatus?checkExpenses=true`),
+            ]);
+          })
+          .then(
+            axios.spread((entriesRes, expensesRes) => {
+              const entriesStatusData = entriesRes.data.reduce(
+                (acc, status) => {
+                  acc[status.project_id] = {
+                    today: status.today,
+                    yesterday: status.yesterday,
+                  };
+                  return acc;
+                },
+                {}
+              );
+              setEntriesStatus(entriesStatusData);
+
+              const expensesStatusData = expensesRes.data.reduce(
+                (acc, status) => {
+                  acc[status.project_id] = {
+                    today: status.today,
+                    yesterday: status.yesterday,
+                  };
+                  return acc;
+                },
+                {}
+              );
+              setExpensesStatus(expensesStatusData);
+            })
+          );
       } else {
         console.error("Failed to update project display");
       }
@@ -129,34 +190,28 @@ function Projects() {
     });
   };
 
-  const handleDeleteClick = (project) => {
-    if (markedForDeletion.includes(project.project_id)) {
-      setMarkedForDeletion(
-        markedForDeletion.filter((id) => id !== project.project_id)
-      );
-    } else {
-      setMarkedForDeletion([...markedForDeletion, project.project_id]);
-    }
-  };
-
-  const confirmDelete = async () => {
-    try {
-      await axios.post(`${ip}/deleteMarkedProjects`, {
-        projectIds: markedForDeletion,
-      });
-      setMarkedForDeletion([]);
-      const response = await axios.get(`${ip}/projects`);
-      if (response.status === 200) {
-        setProjects(response.data);
-      } else {
-        console.error("Failed to fetch updated projects");
-      }
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("Error confirming delete:", error.message);
-        setDeleteMessage("Must delete expenses and daily logs first");
-      } else {
-        console.error("Unexpected error:", error);
+  const handleDeleteClick = async (projectId) => {
+    const isConfirmed = window.confirm(
+      "Are you sure you want to delete this project?"
+    );
+    if (isConfirmed) {
+      try {
+        await axios.post(`${ip}/deleteMarkedProjects`, {
+          projectIds: [projectId],
+        });
+        const response = await axios.get(`${ip}/projects`);
+        if (response.status === 200) {
+          setProjects(response.data);
+        } else {
+          console.error("Failed to fetch updated projects");
+        }
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          console.error("Error confirming delete:", error.message);
+          alert("Must delete all expenses and daily logs associated first.");
+        } else {
+          console.error("Unexpected error:", error);
+        }
       }
     }
   };
@@ -190,8 +245,6 @@ function Projects() {
         </form>
         <div>
           <button onClick={handleAddProject}>Add Project</button>{" "}
-          <button onClick={confirmDelete}>Confirm Delete</button>
-          <div>{deleteMessage}</div>
         </div>
       </div>
       <table className="table mt-3">
@@ -213,16 +266,9 @@ function Projects() {
         </thead>
         <tbody>
           {projects.map((project) => (
-            <tr
-              key={project.project_id}
-              className={
-                markedForDeletion.includes(project.project_id)
-                  ? "red-slash"
-                  : ""
-              }
-            >
+            <tr key={project.project_id}>
               <td>{project.project_id}</td>
-              <td>{project.project_name}</td>
+              <td className="project-name">{project.project_name}</td>
               <td>{project.project_status === 1 ? "Ongoing" : "Complete"}</td>
               <td>{project.start_date}</td>
               <td>{project.end_date}</td>
@@ -240,17 +286,28 @@ function Projects() {
               <td>
                 <button
                   onClick={() =>
-                    navigateToDailyLogs(project.project_id, "Yesterday")
+                    navigateToDailyLogs(project.project_id, "Today")
                   }
+                  style={{
+                    backgroundColor: entriesStatus[project.project_id]?.today
+                      ? "green"
+                      : "red",
+                  }}
                 >
-                  Yesterday
+                  Today
                 </button>
                 <button
                   onClick={() =>
-                    navigateToDailyLogs(project.project_id, "Today")
+                    navigateToDailyLogs(project.project_id, "Yesterday")
                   }
+                  style={{
+                    backgroundColor: entriesStatus[project.project_id]
+                      ?.yesterday
+                      ? "green"
+                      : "red",
+                  }}
                 >
-                  Today
+                  Yesterday
                 </button>
                 <button
                   onClick={() =>
@@ -262,12 +319,25 @@ function Projects() {
               </td>
               <td>
                 <button
+                  onClick={() => navigateToExpenses(project, "Today")}
+                  style={{
+                    backgroundColor: expensesStatus[project.project_id]?.today
+                      ? "green"
+                      : "red",
+                  }}
+                >
+                  Today
+                </button>
+                <button
                   onClick={() => navigateToExpenses(project, "Yesterday")}
+                  style={{
+                    backgroundColor: expensesStatus[project.project_id]
+                      ?.yesterday
+                      ? "green"
+                      : "red",
+                  }}
                 >
                   Yesterday
-                </button>
-                <button onClick={() => navigateToExpenses(project, "Today")}>
-                  Today
                 </button>
                 <button onClick={() => navigateToExpenses(project, "View All")}>
                   View All
@@ -275,14 +345,14 @@ function Projects() {
               </td>
               <td>{project.notifications}</td>
               <td>
-                <button onClick={() => handleEditClick(project)}>Edit</button>
+                <button onClick={() => handleEditClick(project)}>
+                  Edit Project
+                </button>
                 <button onClick={() => navigateToEditEngineers(project)}>
                   Edit Engineers
                 </button>
-                <button onClick={() => handleDeleteClick(project)}>
-                  {markedForDeletion.includes(project.project_id)
-                    ? "Undo"
-                    : "Delete"}
+                <button onClick={() => handleDeleteClick(project.project_id)}>
+                  Delete Projects
                 </button>
               </td>
             </tr>

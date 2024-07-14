@@ -33,6 +33,9 @@ th,
 td {
   padding: 10px;
   text-align: left;
+  text-align: center;
+  vertical-align: middle;
+  padding: 10px;
 }
 th {
   /* background-color: #004d40; */
@@ -138,4 +141,17 @@ nav a:hover {
 .red-slash {
   text-decoration: line-through;
   color: red;
+}
+
+tr.highlight {
+  border: 5px solid navy;
+}
+
+button {
+  width: 100%;
+  margin: 2px 0;
+}
+
+.project-name {
+  font-weight: bold;
 }

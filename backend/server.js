@@ -298,46 +298,46 @@ app.post("/updateProjectDisplay", async (req, res) => {
   res.redirect("/projects");
 });
 
-app.post("/register", async (req, res) => {
-  const email = req.body.username;
-  const password = req.body.password;
+// app.post("/register", async (req, res) => {
+//   const username = req.body.username;
+//   const password = req.body.password;
 
-  try {
-    // Check if the email already exists
-    const checkResult = await db.query("SELECT * FROM users WHERE email = $1", [
-      email,
-    ]);
-    console.log(checkResult.rows);
-    if (checkResult.rows.length > 0) {
-      return res.status(409).json({ message: "Email already exists" }); // 409 Conflict
-    } else {
-      bcrypt.hash(password, saltRounds, async (err, hash) => {
-        if (err) {
-          console.error("Error hashing password:", err);
-          return res.status(500).json({ message: "Error hashing password" });
-        } else {
-          const result = await db.query(
-            "INSERT INTO users (email, password) VALUES ($1, $2) RETURNING *",
-            [email, hash]
-          );
-          const user = result.rows[0];
-          // console.log(result.rows);
-          req.login(user, (err) => {
-            if (err) {
-              console.error("Error logging in user:", err);
-              return res.status(500).json({ message: "Error logging in user" });
-            }
-            console.log("success");
-            return res.status(201).json({ message: "Registration successful" }); // 201 Created
-          });
-        }
-      });
-    }
-  } catch (err) {
-    console.log(err);
-    return res.status(500).json({ message: "Server error" });
-  }
-});
+//   try {
+//     // Check if the username already exists
+//     const checkResult = await db.query("SELECT * FROM users WHERE username = $1", [
+//       username,
+//     ]);
+//     console.log(checkResult.rows);
+//     if (checkResult.rows.length > 0) {
+//       return res.status(409).json({ message: "Username already exists" }); // 409 Conflict
+//     } else {
+//       bcrypt.hash(password, saltRounds, async (err, hash) => {
+//         if (err) {
+//           console.error("Error hashing password:", err);
+//           return res.status(500).json({ message: "Error hashing password" });
+//         } else {
+//           const result = await db.query(
+//             "INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *",
+//             [username, hash]
+//           );
+//           const user = result.rows[0];
+//           // console.log(result.rows);
+//           req.login(user, (err) => {
+//             if (err) {
+//               console.error("Error logging in user:", err);
+//               return res.status(500).json({ message: "Error logging in user" });
+//             }
+//             console.log("success");
+//             return res.status(201).json({ message: "Registration successful" }); // 201 Created
+//           });
+//         }
+//       });
+//     }
+//   } catch (err) {
+//     console.log(err);
+//     return res.status(500).json({ message: "Server error" });
+//   }
+// });
 
 // Login route
 app.post("/login", passport.authenticate("local"), (req, res) => {
@@ -351,9 +351,10 @@ passport.use(
     { usernameField: "username", passwordField: "password" },
     async (username, password, done) => {
       try {
-        const result = await db.query("SELECT * FROM users WHERE email = $1", [
-          username,
-        ]);
+        const result = await db.query(
+          "SELECT * FROM users WHERE username = $1",
+          [username]
+        );
         console.log("STRATEGY ", result);
         if (result.rows.length > 0) {
           const user = result.rows[0];
@@ -762,7 +763,6 @@ app.post("/deleteMarkedDailyLogs", async (req, res) => {
       `DELETE FROM daily_logs WHERE daily_log_id = ANY($1::int[]) RETURNING *`,
       [dailyLogIds]
     );
-
     res.json(result.rows);
   } catch (error) {
     console.error("Error deleting daily logs:", error);
@@ -797,6 +797,81 @@ app.post("/deleteMarkedProjects", async (req, res) => {
     // Rollback transaction on error
     await db.query("ROLLBACK");
     console.error("Error deleting projects:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Function to check if a project has log or expense entries on a specific date
+const hasEntriesOnDate = async (projectId, date, isLog) => {
+  let query = "";
+  if (isLog) {
+    query = `
+    SELECT EXISTS (
+      SELECT 1 
+      FROM daily_logs 
+      WHERE project_id = $1 AND log_date = $2
+    ) AS exists`;
+  } else {
+    query = `
+    SELECT EXISTS (
+      SELECT 1 
+      FROM expenses 
+      WHERE project_id = $1 AND expense_date = $2
+    ) AS exists`;
+  }
+  const result = await db.query(query, [projectId, date]);
+  return result.rows[0].exists;
+};
+
+// Function to check if a project has entries or expenses on a specific date
+const hasEntriesOrExpensesOnDate = async (projectId, date, checkExpenses) => {
+  const table = checkExpenses ? "expenses" : "daily_logs";
+  const dateColumn = checkExpenses ? "expense_date" : "log_date";
+
+  const query = `
+    SELECT EXISTS (
+      SELECT 1 
+      FROM ${table} 
+      WHERE project_id = $1 AND ${dateColumn} = $2
+    ) AS exists
+  `;
+  const result = await db.query(query, [projectId, date]);
+  return result.rows[0].exists;
+};
+
+app.get("/projectEntriesStatus", async (req, res) => {
+  const { checkExpenses } = req.query;
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const formattedToday = getFormattedDate(today);
+  const formattedYesterday = getFormattedDate(yesterday);
+
+  try {
+    const projects = await db.query("SELECT project_id FROM projects");
+    const statusPromises = projects.rows.map(async (project) => {
+      const todayStatus = await hasEntriesOrExpensesOnDate(
+        project.project_id,
+        formattedToday,
+        checkExpenses === "true"
+      );
+      const yesterdayStatus = await hasEntriesOrExpensesOnDate(
+        project.project_id,
+        formattedYesterday,
+        checkExpenses === "true"
+      );
+      return {
+        project_id: project.project_id,
+        today: todayStatus,
+        yesterday: yesterdayStatus,
+      };
+    });
+
+    const status = await Promise.all(statusPromises);
+    res.json(status);
+  } catch (error) {
+    console.error("Error fetching project entries status:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
