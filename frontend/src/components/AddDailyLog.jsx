@@ -68,7 +68,7 @@ function AddDailyLog() {
           hours: "",
           pdf_url: "",
         });
-        setMessage("Added daily log");
+        nav(-1);
       } else {
         setMessage("Failed to add daily log");
       }

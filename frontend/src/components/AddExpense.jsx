@@ -109,7 +109,7 @@ function AddExpense() {
           status3: false,
           pdf_url: "",
         });
-        setMessage("Added expense");
+        nav(-1);
       } else {
         setMessage("Failed to add expense");
       }
@@ -117,6 +117,10 @@ function AddExpense() {
       setMessage(error.response?.data?.message || "Error adding expense");
       console.error("Error adding expense:", error);
     }
+  };
+
+  const handleCancel = () => {
+    nav(-1);
   };
 
   const formatDate = (dateStr) => {
@@ -269,6 +273,13 @@ function AddExpense() {
       </div>
       <button type="submit" className="btn btn-primary">
         Add
+      </button>
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={handleCancel}
+      >
+        Cancel
       </button>
       <div>{message}</div>
     </form>

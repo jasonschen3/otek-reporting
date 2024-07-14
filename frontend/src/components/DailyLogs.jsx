@@ -52,6 +52,10 @@ const DailyLogs = () => {
     fetchProjectName();
   }, [projectId, action, isAuthenticated, navigate]);
 
+  function handleCancelEdit() {
+    setEditDailyLog(null);
+  }
+
   function handleAddDailyLog() {
     navigate("/addDailyLog", {
       state: {
@@ -268,6 +272,13 @@ const DailyLogs = () => {
               className="btn btn-primary"
             >
               Save
+            </button>
+            <button
+              type="button"
+              onClick={handleEditClick}
+              className="btn btn-secondary"
+            >
+              Cancel
             </button>
           </form>
         </div>

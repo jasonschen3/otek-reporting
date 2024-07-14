@@ -42,6 +42,9 @@ function EditEngineers() {
       });
   }, [project.project_id, navigate, isAuthenticated]);
 
+  function handleCancelEdit() {
+    navigate(-1);
+  }
   const handleEngineerChange = (e) => {
     const { value, checked } = e.target;
     if (checked) {
@@ -94,6 +97,13 @@ function EditEngineers() {
         </div>
         <button type="button" onClick={handleSave} className="btn btn-primary">
           Save
+        </button>
+        <button
+          type="button"
+          onClick={handleCancelEdit}
+          className="btn btn-secondary"
+        >
+          Cancel
         </button>
       </form>
     </div>

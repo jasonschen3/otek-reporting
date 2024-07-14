@@ -109,6 +109,10 @@ function Projects() {
     }
   };
 
+  const handleCancelEdit = () => {
+    setEditProject(null);
+  };
+
   const handleUpdateProjectDisplay = async (event) => {
     event.preventDefault();
     const ongoing = document.getElementById("ongoingCheckbox").checked;
@@ -425,16 +429,6 @@ function Projects() {
                 className="form-control"
               />
             </div>
-            <div className="form-group">
-              <label>Notifications</label>
-              <input
-                type="text"
-                name="notifications"
-                value={editProject.notifications}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
             <button
               type="button"
               onClick={handleSave}
@@ -442,6 +436,14 @@ function Projects() {
             >
               Save
             </button>
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="btn btn-secondary"
+            >
+              Cancel
+            </button>
+            "
           </form>
         </div>
       )}

@@ -12,7 +12,6 @@ function AddProject() {
     end_date: "",
     details: "",
     location: "",
-    notifications: "",
     engineer_ids: [],
   });
   const [engineers, setEngineers] = useState([]);
@@ -71,10 +70,9 @@ function AddProject() {
           end_date: "",
           details: "",
           location: "",
-          notifications: "",
           engineer_ids: [],
         });
-        setMessage("Added project");
+        nav(-1);
       } else {
         setMessage("Failed to add project");
       }
@@ -82,6 +80,10 @@ function AddProject() {
       setMessage(error.response.data.message);
       console.error("Error adding project:", error);
     }
+  };
+
+  const handleCancel = () => {
+    nav(-1);
   };
 
   return (
@@ -152,16 +154,6 @@ function AddProject() {
         />
       </div>
       <div className="form-group">
-        <label>Notifications</label>
-        <input
-          type="text"
-          name="notifications"
-          value={newProject.notifications}
-          onChange={handleNewProjectChange}
-          className="form-control"
-        />
-      </div>
-      <div className="form-group">
         <label>Engineers</label>
         {engineers.map((engineer) => (
           <label key={engineer.engineer_id} style={{ display: "block" }}>
@@ -178,7 +170,13 @@ function AddProject() {
       <button type="submit" className="btn btn-primary">
         Add
       </button>
-
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={handleCancel}
+      >
+        Cancel
+      </button>
       <div>{message}</div>
     </form>
   );

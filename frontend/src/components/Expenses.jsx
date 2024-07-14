@@ -55,6 +55,10 @@ const Expenses = () => {
     }, 0);
   }
 
+  function handleCancelEdit() {
+    setEditExpense(null);
+  }
+
   async function handleDeleteClick(expenseId) {
     const isConfirmed = window.confirm(
       "Are you sure you want to delete this expense?"
@@ -332,6 +336,13 @@ const Expenses = () => {
               className="btn btn-primary"
             >
               Save
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="btn btn-secondary"
+            >
+              Cancel
             </button>
           </form>
         </div>
