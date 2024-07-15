@@ -141,7 +141,14 @@ const DailyLogs = () => {
     <div className="container mt-5" id="daily-logs">
       <h1>Daily Logs Report for {projectTitle}</h1>
       <div className="subheading">
-        <button onClick={handleAddDailyLog}>Add Daily Log</button>
+        <div></div>
+        <button
+          onClick={handleAddDailyLog}
+          id="log-add"
+          className="btn btn-primary"
+        >
+          Add Daily Log
+        </button>
       </div>
       <table className="table mt-3">
         <thead>

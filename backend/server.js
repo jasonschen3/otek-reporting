@@ -150,6 +150,8 @@ app.post("/dailyLogs", async (req, res) => {
   const formattedToday = getFormattedDate(today);
   const formattedYesterday = getFormattedDate(yesterday);
 
+  console.log("Today's date is: ", formattedToday);
+
   let currDailyLogsInfo = null;
 
   const baseQuery = `

@@ -137,7 +137,14 @@ const Expenses = () => {
       <h1>Expenses Report for {project?.project_name || ""}</h1>
 
       <div className="subheading">
-        <button onClick={handleAddExpense}>Add Expense</button>
+        <div></div>
+        <button
+          onClick={handleAddExpense}
+          id="expense-add"
+          className="btn btn-primary"
+        >
+          Add Expense
+        </button>
       </div>
 
       <table className="table mt-3">

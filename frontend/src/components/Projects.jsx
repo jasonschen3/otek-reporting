@@ -244,11 +244,19 @@ function Projects() {
             <input type="checkbox" name="completed" id="completedCheckbox" />
             Completed
           </label>
-          <button type="submit">Display</button>
+          <button type="submit" className="btn btn-primary">
+            Display
+          </button>
           <div>Currently Displaying: {displayingMessage}</div>
         </form>
         <div>
-          <button onClick={handleAddProject}>Add Project</button>{" "}
+          <button
+            onClick={handleAddProject}
+            className="btn btn-primary"
+            id="project-add"
+          >
+            Add Project
+          </button>{" "}
         </div>
       </div>
       <table className="table mt-3">
@@ -292,11 +300,11 @@ function Projects() {
                   onClick={() =>
                     navigateToDailyLogs(project.project_id, "Today")
                   }
-                  style={{
-                    backgroundColor: entriesStatus[project.project_id]?.today
-                      ? "green"
-                      : "red",
-                  }}
+                  className={
+                    entriesStatus[project.project_id]?.today
+                      ? "btn btn-success"
+                      : "btn btn-danger"
+                  }
                 >
                   Today
                 </button>
@@ -304,12 +312,11 @@ function Projects() {
                   onClick={() =>
                     navigateToDailyLogs(project.project_id, "Yesterday")
                   }
-                  style={{
-                    backgroundColor: entriesStatus[project.project_id]
-                      ?.yesterday
-                      ? "green"
-                      : "red",
-                  }}
+                  className={
+                    entriesStatus[project.project_id]?.yesterday
+                      ? "btn btn-success"
+                      : "btn btn-danger"
+                  }
                 >
                   Yesterday
                 </button>
@@ -324,22 +331,21 @@ function Projects() {
               <td>
                 <button
                   onClick={() => navigateToExpenses(project, "Today")}
-                  style={{
-                    backgroundColor: expensesStatus[project.project_id]?.today
-                      ? "green"
-                      : "red",
-                  }}
+                  className={
+                    expensesStatus[project.project_id]?.today
+                      ? "btn btn-success"
+                      : "btn btn-danger"
+                  }
                 >
                   Today
                 </button>
                 <button
                   onClick={() => navigateToExpenses(project, "Yesterday")}
-                  style={{
-                    backgroundColor: expensesStatus[project.project_id]
-                      ?.yesterday
-                      ? "green"
-                      : "red",
-                  }}
+                  className={
+                    expensesStatus[project.project_id]?.yesterday
+                      ? "btn btn-success"
+                      : "btn btn-danger"
+                  }
                 >
                   Yesterday
                 </button>

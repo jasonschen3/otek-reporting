@@ -77,6 +77,9 @@ function AddDailyLog() {
       console.error("Error adding daily log:", error);
     }
   };
+  const handleCancelEdit = () => {
+    nav(-1);
+  };
 
   return (
     <form onSubmit={handleAddDailyLog} className="container mt-5">
@@ -149,6 +152,13 @@ function AddDailyLog() {
       </div>
       <button type="submit" className="btn btn-primary">
         Add
+      </button>
+      <button
+        type="submit"
+        className="btn btn-secondary"
+        onClick={handleCancelEdit}
+      >
+        Cancel
       </button>
       <div>{message}</div>
     </form>

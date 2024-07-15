@@ -155,3 +155,38 @@ button {
 .project-name {
   font-weight: bold;
 }
+
+/* Header styles */
+.navbar {
+  font-size: x-large;
+  text-decoration: none;
+  height: 10vh;
+}
+
+.navbar img {
+  height: 100%;
+  margin-left: 10vw;
+}
+
+.navbar ul {
+  display: flex;
+  align-items: center;
+  margin-right: 10vw;
+  gap: 40px;
+  list-style-type: none; /* Removes bullet points */
+}
+
+.navbar a {
+  text-decoration: none; /* Removes underline from links */
+  color: gainsboro; /* Sets the link color to white */
+}
+
+#project-add,
+#expense-add,
+#log-add {
+  width: 9vw;
+}
+
+.checkbox-label {
+  margin-right: 20px; /* Adds space between the checkboxes */
+}
