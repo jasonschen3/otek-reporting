@@ -13,6 +13,7 @@ import AddDailyLog from "./components/AddDailyLog";
 import Unauthorized from "./components/Unauthorized";
 import EditEngineers from "./components/EditEngineers";
 import Layout from "./components/Layout";
+import Notifications from "./components/Notifications";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/unauthorized" element={<Unauthorized />} />
         <Route element={<Layout />}>
           {/* <Route path="/register" element={<Register />} /> */}
           <Route path="/projects" element={<Projects />} />
@@ -28,8 +30,8 @@ function App() {
           <Route path="/addDailyLog" element={<AddDailyLog />} />
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/addExpense" element={<AddExpense />} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="/editEngineers" element={<EditEngineers />} />
+          <Route path="/notifications" element={<Notifications />} />
         </Route>
       </Routes>
     </BrowserRouter>

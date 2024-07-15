@@ -47,29 +47,27 @@ async function updateCompanyInfo() {
   let currProjectsInfo = null;
 
   const query = `
-    SELECT 
-      p.project_id, 
-      p.project_name, 
-      p.project_status, 
-      TO_CHAR(p.start_date, 'YYYY-MM-DD') AS start_date, 
-      TO_CHAR(p.end_date, 'YYYY-MM-DD') AS end_date, 
-      COALESCE(STRING_AGG(e.name, ', '), '') AS engineer_names, 
-      p.details, 
-      p.location, 
-      p.notifications 
-    FROM 
-      projects p 
-    LEFT JOIN 
-      projects_assign_engineers pae ON p.project_id = pae.project_id 
-    LEFT JOIN 
-      engineers e ON pae.engineer_id = e.engineer_id 
-    WHERE 
-      p.project_status = $1 
-    GROUP BY 
-      p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location, p.notifications 
-    ORDER BY 
-      p.project_id;
-  `;
+  SELECT 
+    p.project_id, 
+    p.project_name, 
+    p.project_status, 
+    TO_CHAR(p.start_date, 'YYYY-MM-DD') AS start_date, 
+    TO_CHAR(p.end_date, 'YYYY-MM-DD') AS end_date, 
+    COALESCE(STRING_AGG(e.name, ', '), '') AS engineer_names, 
+    p.details, 
+    p.location
+  FROM 
+    projects p 
+  LEFT JOIN 
+    projects_assign_engineers pae ON p.project_id = pae.project_id 
+  LEFT JOIN 
+    engineers e ON pae.engineer_id = e.engineer_id 
+  WHERE 
+    p.project_status = $1 
+  GROUP BY 
+    p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location
+  ORDER BY 
+    p.project_id;`;
 
   if (projectDisplayStatus === 1) {
     // ongoing projects
@@ -91,8 +89,7 @@ async function updateCompanyInfo() {
         TO_CHAR(p.end_date, 'YYYY-MM-DD') AS end_date, 
         COALESCE(STRING_AGG(e.name, ', '), '') AS engineer_names, 
         p.details, 
-        p.location, 
-        p.notifications 
+        p.location
       FROM 
         projects p 
       LEFT JOIN 
@@ -100,8 +97,7 @@ async function updateCompanyInfo() {
       LEFT JOIN 
         engineers e ON pae.engineer_id = e.engineer_id 
       GROUP BY 
-        p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location, p.notifications 
-      ORDER BY 
+        p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location,
         p.project_id;
     `);
   }
@@ -150,7 +146,7 @@ app.post("/dailyLogs", async (req, res) => {
   const formattedToday = getFormattedDate(today);
   const formattedYesterday = getFormattedDate(yesterday);
 
-  console.log("Today's date is: ", formattedToday);
+  // console.log("Today's date is: ", formattedToday);
 
   let currDailyLogsInfo = null;
 
@@ -407,12 +403,11 @@ app.post("/editProject", async (req, res) => {
     end_date,
     details,
     location,
-    notifications,
   } = req.body;
 
   try {
     const result = await db.query(
-      `UPDATE projects SET project_name = $1, project_status = $2, start_date = $3, end_date = $4, details = $5, location = $6, notifications = $7 WHERE project_id = $8 RETURNING *`,
+      `UPDATE projects SET project_name = $1, project_status = $2, start_date = $3, end_date = $4, details = $5, location = $6 WHERE project_id = $7 RETURNING *`,
       [
         project_name,
         project_status,
@@ -420,7 +415,6 @@ app.post("/editProject", async (req, res) => {
         end_date,
         details,
         location,
-        notifications,
         project_id,
       ]
     );
@@ -596,7 +590,6 @@ app.post("/addProject", async (req, res) => {
     end_date,
     details,
     location,
-    notifications,
     engineer_ids,
   } = req.body;
 
@@ -606,18 +599,10 @@ app.post("/addProject", async (req, res) => {
     end_date = end_date === "" ? null : end_date;
 
     const newProjectResult = await db.query(
-      `INSERT INTO projects (project_name, project_status, start_date, end_date, details, location, notifications)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO projects (project_name, project_status, start_date, end_date, details, location)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [
-        project_name,
-        project_status,
-        start_date,
-        end_date,
-        details,
-        location,
-        notifications,
-      ]
+      [project_name, project_status, start_date, end_date, details, location]
     );
 
     const newProject = newProjectResult.rows[0];
@@ -699,6 +684,9 @@ app.post("/addExpense", async (req, res) => {
     pdf_url,
   } = req.body;
 
+  console.log("Received data:", req.body); // Log the received data
+  const parsedDailyLogId = daily_log_id === "" ? null : daily_log_id;
+
   try {
     const result = await db.query(
       `INSERT INTO expenses (
@@ -717,7 +705,7 @@ app.post("/addExpense", async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *`,
       [
-        daily_log_id,
+        parsedDailyLogId,
         engineer_id,
         project_id,
         expense_date,
@@ -735,10 +723,11 @@ app.post("/addExpense", async (req, res) => {
     res.status(200).json(result.rows[0]);
   } catch (err) {
     console.error("Error adding expense:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: err.message });
   }
 });
-
 // Delete
 app.post("/deleteMarkedExpenses", async (req, res) => {
   const { expenseIds } = req.body;
@@ -803,28 +792,6 @@ app.post("/deleteMarkedProjects", async (req, res) => {
   }
 });
 
-// Function to check if a project has log or expense entries on a specific date
-const hasEntriesOnDate = async (projectId, date, isLog) => {
-  let query = "";
-  if (isLog) {
-    query = `
-    SELECT EXISTS (
-      SELECT 1 
-      FROM daily_logs 
-      WHERE project_id = $1 AND log_date = $2
-    ) AS exists`;
-  } else {
-    query = `
-    SELECT EXISTS (
-      SELECT 1 
-      FROM expenses 
-      WHERE project_id = $1 AND expense_date = $2
-    ) AS exists`;
-  }
-  const result = await db.query(query, [projectId, date]);
-  return result.rows[0].exists;
-};
-
 // Function to check if a project has entries or expenses on a specific date
 const hasEntriesOrExpensesOnDate = async (projectId, date, checkExpenses) => {
   const table = checkExpenses ? "expenses" : "daily_logs";
@@ -875,6 +842,60 @@ app.get("/projectEntriesStatus", async (req, res) => {
   } catch (error) {
     console.error("Error fetching project entries status:", error);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get("/notifications", async (req, res) => {
+  const { project_id } = req.query;
+  try {
+    const result = await db.query(
+      `SELECT noti_id, noti_type, TO_CHAR(noti_related_date, 'MM-DD-YYYY') as formatted_date, noti_message
+       FROM notifications WHERE project_id = $1`,
+      [project_id]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get("/missingLogs", async (req, res) => {
+  const { project_id } = req.query;
+  try {
+    // Fetch the start and end date of the project
+    const projectResult = await db.query(
+      `SELECT start_date, end_date FROM projects WHERE project_id = $1`,
+      [project_id]
+    );
+    if (projectResult.rows.length === 0) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    const startDate = new Date(projectResult.rows[0].start_date);
+    const endDate = projectResult.rows[0].end_date
+      ? new Date(projectResult.rows[0].end_date)
+      : new Date();
+
+    // Calculate the total number of days between the start date and the end date (or current date)
+    const totalDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+
+    // Fetch the existing daily logs
+    const logsResult = await db.query(
+      `SELECT log_date FROM daily_logs WHERE project_id = $1`,
+      [project_id]
+    );
+
+    const existingLogsCount = logsResult.rows.length;
+
+    // Calculate missing days
+    const missingDays = totalDays - existingLogsCount;
+
+    res.json({ missingDailyLogs: missingDays });
+  } catch (error) {
+    console.error("Error calculating missing daily logs:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

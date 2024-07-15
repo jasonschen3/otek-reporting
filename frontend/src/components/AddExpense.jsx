@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { format } from "date-fns"; // Import date-fns for date formatting
+import { format } from "date-fns";
 
 function AddExpense() {
   let ip = "http://localhost:3000";
@@ -42,19 +42,16 @@ function AddExpense() {
     };
 
     fetchEngineers();
-  }, []);
+  }, [isAuthenticated, nav, ip]);
 
   useEffect(() => {
     if (selectedDate) {
-      console.log("Inside");
       const fetchDailyLogs = async () => {
         try {
-          console.log(selectedDate, " ", projectId);
           const res = await axios.get(`${ip}/dailyLogs`, {
             params: { projectId, date: selectedDate },
           });
           setDailyLogs(res.data);
-          console.log("fetched", res.data);
         } catch (error) {
           console.error(
             "There was an error fetching the daily logs data",
@@ -65,7 +62,7 @@ function AddExpense() {
 
       fetchDailyLogs();
     }
-  }, [projectId, selectedDate]);
+  }, [projectId, selectedDate, ip]);
 
   const handleNewExpenseChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -93,6 +90,7 @@ function AddExpense() {
       status2: newExpense.status2 ? 1 : 0,
       status3: newExpense.status3 ? 1 : 0,
     };
+
     try {
       const response = await axios.post(`${ip}/addExpense`, expenseData);
       if (response.status === 200) {
@@ -188,7 +186,6 @@ function AddExpense() {
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
           className="form-control"
-          required
         />
       </div>
       <div className="form-group">
@@ -198,7 +195,6 @@ function AddExpense() {
           value={newExpense.daily_log_id}
           onChange={handleNewExpenseChange}
           className="form-control"
-          required
         >
           <option value="">Select Daily Log</option>
           {dailyLogs.map((log) => (

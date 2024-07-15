@@ -9,6 +9,7 @@ function Projects() {
   const [displayingMessage, setDisplayingMessage] = useState("Ongoing");
   const [entriesStatus, setEntriesStatus] = useState({});
   const [expensesStatus, setExpensesStatus] = useState({});
+  const [missingLogs, setMissingLogs] = useState({}); // Added state for missing logs
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -17,9 +18,7 @@ function Projects() {
     if (location.state?.isAuthenticated) {
       axios
         .post(`${ip}/updateProjectDisplay`, { ongoing: true, completed: false })
-        .then((res) => {
-          return axios.get(`${ip}/projects`);
-        })
+        .then((res) => axios.get(`${ip}/projects`))
         .then((res) => {
           setProjects(res.data);
           return axios.all([
@@ -194,6 +193,16 @@ function Projects() {
     });
   };
 
+  const navigateToNotifications = (project) => {
+    navigate("/notifications", { state: { project, isAuthenticated: true } });
+  };
+
+  const navigateToEditEngineers = (project) => {
+    navigate("/editEngineers", {
+      state: { project, isAuthenticated: true },
+    });
+  };
+
   const handleDeleteClick = async (projectId) => {
     const isConfirmed = window.confirm(
       "Are you sure you want to delete this project?"
@@ -220,10 +229,26 @@ function Projects() {
     }
   };
 
-  const navigateToEditEngineers = (project) => {
-    navigate("/editEngineers", {
-      state: { project, isAuthenticated: true },
+  useEffect(() => {
+    // Fetch missing logs for each project after projects have been loaded
+    projects.forEach((project) => {
+      renderMissingLogs(project.project_id);
     });
+  }, [projects]);
+
+  // Function to fetch missing logs for a project
+  const renderMissingLogs = async (projectId) => {
+    try {
+      const response = await axios.get(`${ip}/missingLogs`, {
+        params: { project_id: projectId },
+      });
+      setMissingLogs((prev) => ({
+        ...prev,
+        [projectId]: response.data.missingDailyLogs,
+      }));
+    } catch (error) {
+      console.error("Error fetching missing logs:", error);
+    }
   };
 
   return (
@@ -353,7 +378,16 @@ function Projects() {
                   View All
                 </button>
               </td>
-              <td>{project.notifications}</td>
+              <td>
+                <div>
+                  {missingLogs[project.project_id] !== undefined
+                    ? `${missingLogs[project.project_id]} missing logs`
+                    : ""}
+                </div>
+                <button onClick={() => navigateToNotifications(project)}>
+                  View Notifications
+                </button>
+              </td>
               <td>
                 <button onClick={() => handleEditClick(project)}>
                   Edit Project
@@ -449,7 +483,6 @@ function Projects() {
             >
               Cancel
             </button>
-            "
           </form>
         </div>
       )}
