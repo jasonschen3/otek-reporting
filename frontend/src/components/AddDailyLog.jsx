@@ -9,7 +9,7 @@ function AddDailyLog() {
     log_date: "",
     engineer_id: "",
     status_submitted: false,
-    status_reimbursed: false,
+    received_payment: false,
     hours: "",
     pdf_url: "",
   });
@@ -53,7 +53,7 @@ function AddDailyLog() {
       ...newDailyLog,
       project_id: projectId,
       status_submitted: newDailyLog.status_submitted ? 1 : 0,
-      status_reimbursed: newDailyLog.status_reimbursed ? 1 : 0,
+      received_payment: newDailyLog.received_payment ? 1 : 0,
       hours: newDailyLog.hours ? parseFloat(newDailyLog.hours) : null,
     };
 
@@ -64,7 +64,7 @@ function AddDailyLog() {
           log_date: "",
           engineer_id: "",
           status_submitted: false,
-          status_reimbursed: false,
+          received_payment: false,
           hours: "",
           pdf_url: "",
         });
@@ -125,8 +125,8 @@ function AddDailyLog() {
         <label>Reimbursed</label>
         <input
           type="checkbox"
-          name="status_reimbursed"
-          checked={newDailyLog.status_reimbursed}
+          name="received_payment"
+          checked={newDailyLog.received_payment}
           onChange={handleNewDailyLogChange}
         />
       </div>

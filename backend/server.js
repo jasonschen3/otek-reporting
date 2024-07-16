@@ -6,6 +6,11 @@ import passport from "passport";
 import LocalStrategy from "passport-local";
 import session from "express-session";
 import env from "dotenv";
+import moment from "moment-timezone";
+
+// Get the current date and time in Texas Central Time
+const texasTime = moment().tz("America/Chicago").format();
+// TODO change all the times to texasTime
 
 import cors from "cors";
 
@@ -157,7 +162,7 @@ app.post("/dailyLogs", async (req, res) => {
       p.project_name, 
       COALESCE(STRING_AGG(e.name, ', '), '[No engineers]') AS engineer_names, 
       dl.status_submitted, 
-      dl.status_reimbursed, 
+      dl.received_payment, 
       dl.hours, 
       dl.pdf_url 
     FROM 
@@ -175,17 +180,17 @@ app.post("/dailyLogs", async (req, res) => {
   if (action === "Yesterday") {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.status_reimbursed, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`;
     params = [projectId, formattedYesterday];
   } else if (action === "Today") {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.status_reimbursed, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`;
     params = [projectId, formattedToday];
   } else if (action === "View All") {
     query =
       baseQuery +
-      `GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.status_reimbursed, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`;
+      `GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`;
     params = [projectId];
   } else {
     return res.status(400).send("Unknown action");
@@ -508,7 +513,7 @@ app.post("/editDailyLog", async (req, res) => {
   const {
     log_date,
     status_submitted,
-    status_reimbursed,
+    received_payment,
     hours,
     pdf_url,
     daily_log_id,
@@ -516,16 +521,20 @@ app.post("/editDailyLog", async (req, res) => {
 
   try {
     const result = await db.query(
-      `UPDATE daily_logs SET log_date = $1, status_submitted = $2, status_reimbursed = $3, hours = $4, pdf_url = $5 WHERE daily_log_id = $6 RETURNING *`,
+      `UPDATE daily_logs SET log_date = $1, status_submitted = $2, received_payment = $3, hours = $4, pdf_url = $5 WHERE daily_log_id = $6 RETURNING *`,
       [
         log_date,
         status_submitted,
-        status_reimbursed,
+        received_payment,
         hours,
         pdf_url,
         daily_log_id,
       ]
     );
+    let date_submitted = null;
+    if (status_submitted === "1") {
+      date_submitted = new Date().toISOString().split("T")[0]; // Set to today's date in YYYY-MM-DD format
+    }
     res.json(result.rows[0]);
   } catch (error) {
     console.error("Error updating daily log:", error);
@@ -563,7 +572,6 @@ app.get("/engineers", async (req, res) => {
   }
 });
 
-// Fetch Daily Logs for a specific project based on id and date and returns logs with same id and engineer name
 app.get("/dailyLogs", async (req, res) => {
   const { projectId, date } = req.query;
   // console.log(projectId, " Project id");
@@ -633,7 +641,7 @@ app.post("/addDailyLog", async (req, res) => {
     log_date,
     engineer_id,
     status_submitted,
-    status_reimbursed,
+    received_payment,
     hours,
     pdf_url,
   } = req.body;
@@ -645,7 +653,7 @@ app.post("/addDailyLog", async (req, res) => {
         log_date,
         engineer_id,
         status_submitted,
-        status_reimbursed,
+        received_payment,
         hours,
         pdf_url
       ) VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -655,12 +663,11 @@ app.post("/addDailyLog", async (req, res) => {
         log_date,
         engineer_id,
         status_submitted,
-        status_reimbursed,
+        received_payment,
         hours,
         pdf_url,
       ]
     );
-
     res.status(200).json(result.rows[0]);
   } catch (err) {
     console.error("Error adding daily log:", err);
@@ -859,6 +866,103 @@ app.get("/notifications", async (req, res) => {
   } catch (error) {
     console.error("Error fetching notifications:", error);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Check if the date is a weekend
+const isWeekend = (date) => {
+  const day = date.getDay();
+  return day === 0 || day === 6; // Sunday (0) or Saturday (6)
+};
+
+// Timer function that runs every hour
+const checkAndUpdateNotifications = async () => {
+  try {
+    // Delete all
+    await db.query("DELETE FROM notifications");
+
+    // Fetch all projects
+    const projects = await db.query("SELECT project_id FROM projects");
+
+    for (const project of projects.rows) {
+      const { project_id } = project;
+
+      // Check for missing daily logs
+      const projectResult = await db.query(
+        `SELECT start_date, end_date FROM projects WHERE project_id = $1`,
+        [project_id]
+      );
+
+      if (
+        projectResult.rows.length === 0 ||
+        !projectResult.rows[0].start_date
+      ) {
+        continue;
+      }
+
+      const startDate = new Date(projectResult.rows[0].start_date);
+      const endDate = projectResult.rows[0].end_date
+        ? new Date(projectResult.rows[0].end_date)
+        : new Date();
+
+      const totalDays =
+        Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+      const logsResult = await db.query(
+        `SELECT log_date FROM daily_logs WHERE project_id = $1`,
+        [project_id]
+      );
+
+      const logDates = logsResult.rows.map(
+        (row) => row.log_date.toISOString().split("T")[0]
+      );
+      const missingDates = [];
+
+      for (let i = 0; i < totalDays; i++) {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + i);
+        const formattedDate = date.toISOString().split("T")[0];
+
+        // Skip weekends
+        if (isWeekend(date)) {
+          continue;
+        }
+
+        if (!logDates.includes(formattedDate)) {
+          missingDates.push(formattedDate);
+        }
+      }
+
+      // Add new notifications for missing dates
+      for (const missingDate of missingDates) {
+        await db.query(
+          "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
+          [1, missingDate, "Daily log missing for " + missingDate, project_id]
+        );
+      }
+    }
+
+    console.log("Notifications updated.");
+  } catch (error) {
+    console.error("Error checking and updating notifications:", error);
+  }
+};
+
+// Run the timer function every hour
+setInterval(checkAndUpdateNotifications, 60 * 60 * 1000);
+
+// Every min
+// setInterval(checkAndUpdateNotifications, 1000 * 60);
+
+// Initial call to start immediately
+checkAndUpdateNotifications();
+
+app.post("/updateNotifications", async (res) => {
+  try {
+    await checkAndUpdateNotifications();
+    console.log("Updated Notifications");
+    res.json("Updated notifications");
+  } catch (err) {
+    console.log("Error updating notifications ", err);
   }
 });
 

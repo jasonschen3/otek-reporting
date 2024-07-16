@@ -185,8 +185,24 @@ button {
 .add {
   width: 9vw;
   margin: 10px;
+  height: 6vh;
 }
 
 .checkbox-label {
   margin-right: 20px; /* Adds space between the checkboxes */
+}
+
+/* .container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Make the engineer names column wider */
+.table th:nth-child(8),
+.table td:nth-child(8) {
+  width: 200px;
+}
+
+.notification {
+  width: 200px;
 }

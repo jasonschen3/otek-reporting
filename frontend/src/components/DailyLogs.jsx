@@ -159,7 +159,7 @@ const DailyLogs = () => {
             <th>Project Name</th>
             <th>Engineer</th>
             <th>Submitted</th>
-            <th>Submitted Billing</th>
+            <th>Received Payment</th>
             <th>Hours</th>
             <th>PDF</th>
             <th>Actions</th>
@@ -187,7 +187,7 @@ const DailyLogs = () => {
                     : "[No engineers]"}
                 </td>
                 <td>{log.status_submitted === "1" ? "Yes" : "No"}</td>
-                <td>{log.status_reimbursed === "1" ? "Yes" : "No"}</td>
+                <td>{log.received_payment === "1" ? "Yes" : "No"}</td>
                 <td>{log.hours}</td>
                 <td>
                   <a
@@ -243,10 +243,10 @@ const DailyLogs = () => {
               </select>
             </div>
             <div className="form-group">
-              <label>Submitted Billing</label>
+              <label>Received Payment</label>
               <select
-                name="status_reimbursed"
-                value={editDailyLog.status_reimbursed}
+                name="received_payment"
+                value={editDailyLog.received_payment}
                 onChange={handleChange}
                 className="form-control"
               >

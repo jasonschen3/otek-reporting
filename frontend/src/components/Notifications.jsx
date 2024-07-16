@@ -27,9 +27,43 @@ const Notifications = () => {
     fetchNotifications();
   });
 
+  function handleBack() {
+    nav(-1);
+  }
+
+  function navAddDailyLog() {
+    nav("/addDailyLog", {
+      state: {
+        projectId: project.project_id,
+        projectTitle: project.project_name,
+        isAuthenticated: true,
+      },
+    });
+  }
+
+  function updateNotifications() {
+    axios.post(`${ip}/updateNotifications`);
+  }
+
   return (
     <div className="container mt-5">
       <h1>Notifications for {project.project_name}</h1>
+      <div className="subheading">
+        <button className="btn btn-secondary back" onClick={handleBack}>
+          Back
+        </button>
+        <div>
+          <button className="btn btn-primary back" onClick={navAddDailyLog}>
+            Add Daily Log
+          </button>
+          <button
+            className="btn btn-primary back"
+            onClick={updateNotifications}
+          >
+            Update Notifications
+          </button>
+        </div>
+      </div>
       <table className="table mt-3">
         <thead>
           <tr>

@@ -9,7 +9,7 @@ function Projects() {
   const [displayingMessage, setDisplayingMessage] = useState("Ongoing");
   const [entriesStatus, setEntriesStatus] = useState({});
   const [expensesStatus, setExpensesStatus] = useState({});
-  const [missingLogs, setMissingLogs] = useState({}); // Added state for missing logs
+  const [notificationsCount, setNotificationsCount] = useState({}); // Added state for notifications count
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,6 +48,11 @@ function Projects() {
               {}
             );
             setExpensesStatus(expensesStatusData);
+
+            // Fetch notifications count for each project
+            projects.forEach((project) => {
+              fetchNotificationsCount(project.project_id);
+            });
           })
         )
         .catch((error) => {
@@ -60,6 +65,23 @@ function Projects() {
       navigate("/");
     }
   }, [location.state, navigate]);
+
+  const fetchNotificationsCount = async (projectId) => {
+    try {
+      const response = await axios.get(`${ip}/notifications`, {
+        params: { project_id: projectId },
+      });
+      const type1Count = response.data.filter(
+        (noti) => noti.noti_type === 1
+      ).length;
+      setNotificationsCount((prev) => ({
+        ...prev,
+        [projectId]: type1Count,
+      }));
+    } catch (error) {
+      console.error("Error fetching notifications count:", error);
+    }
+  };
 
   const handleEditClick = (project) => {
     setEditProject({ ...project });
@@ -236,26 +258,11 @@ function Projects() {
   };
 
   useEffect(() => {
-    // Fetch missing logs for each project after projects have been loaded
+    // Fetch notifications count for each project after projects have been loaded
     projects.forEach((project) => {
-      renderMissingLogs(project.project_id);
+      fetchNotificationsCount(project.project_id);
     });
   }, [projects]);
-
-  // Function to fetch missing logs for a project
-  const renderMissingLogs = async (projectId) => {
-    try {
-      const response = await axios.get(`${ip}/missingLogs`, {
-        params: { project_id: projectId },
-      });
-      setMissingLogs((prev) => ({
-        ...prev,
-        [projectId]: response.data.missingDailyLogs,
-      }));
-    } catch (error) {
-      console.error("Error fetching missing logs:", error);
-    }
-  };
 
   return (
     <div className="container mt-5">
@@ -305,7 +312,7 @@ function Projects() {
             <th>Engineer Names</th>
             <th>Daily Logs</th>
             <th>Expenses</th>
-            <th>Notifications</th>
+            <th className="notification">Notifications</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -386,10 +393,10 @@ function Projects() {
                   View All
                 </button>
               </td>
-              <td>
+              <td className="notification">
                 <div>
-                  {missingLogs[project.project_id] !== undefined
-                    ? `${missingLogs[project.project_id]} missing logs`
+                  {notificationsCount[project.project_id] !== undefined
+                    ? `${notificationsCount[project.project_id]} missing logs`
                     : ""}
                 </div>
                 <button onClick={() => navigateToNotifications(project)}>
