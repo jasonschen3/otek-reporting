@@ -181,10 +181,10 @@ button {
   color: gainsboro; /* Sets the link color to white */
 }
 
-#project-add,
-#expense-add,
-#log-add {
+.back,
+.add {
   width: 9vw;
+  margin: 10px;
 }
 
 .checkbox-label {

@@ -59,6 +59,10 @@ const Expenses = () => {
     setEditExpense(null);
   }
 
+  function handleBack() {
+    navigate(-1);
+  }
+
   async function handleDeleteClick(expenseId) {
     const isConfirmed = window.confirm(
       "Are you sure you want to delete this expense?"
@@ -137,12 +141,10 @@ const Expenses = () => {
       <h1>Expenses Report for {project?.project_name || ""}</h1>
 
       <div className="subheading">
-        <div></div>
-        <button
-          onClick={handleAddExpense}
-          id="expense-add"
-          className="btn btn-primary"
-        >
+        <button onClick={handleBack} className="btn btn-secondary back">
+          Back
+        </button>
+        <button onClick={handleAddExpense} className="btn btn-primary add">
           Add Expense
         </button>
       </div>

@@ -14,6 +14,7 @@ import Unauthorized from "./components/Unauthorized";
 import EditEngineers from "./components/EditEngineers";
 import Layout from "./components/Layout";
 import Notifications from "./components/Notifications";
+import AddEngineers from "./components/AddEngineers";
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/addExpense" element={<AddExpense />} />
           <Route path="/editEngineers" element={<EditEngineers />} />
+          <Route path="/addEngineers" element={<AddEngineers />} />
           <Route path="/notifications" element={<Notifications />} />
         </Route>
       </Routes>

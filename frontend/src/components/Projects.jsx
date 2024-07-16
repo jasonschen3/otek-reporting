@@ -203,6 +203,12 @@ function Projects() {
     });
   };
 
+  const navigateToAddEngineers = () => {
+    navigate("/addEngineers", {
+      state: { isAuthenticated: true },
+    });
+  };
+
   const handleDeleteClick = async (projectId) => {
     const isConfirmed = window.confirm(
       "Are you sure you want to delete this project?"
@@ -276,12 +282,14 @@ function Projects() {
         </form>
         <div>
           <button
-            onClick={handleAddProject}
-            className="btn btn-primary"
-            id="project-add"
+            onClick={navigateToAddEngineers}
+            className="btn btn-primary add"
           >
+            Add Engineers
+          </button>
+          <button onClick={handleAddProject} className="btn btn-primary add">
             Add Project
-          </button>{" "}
+          </button>
         </div>
       </div>
       <table className="table mt-3">

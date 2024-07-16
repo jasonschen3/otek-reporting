@@ -55,6 +55,9 @@ const DailyLogs = () => {
   function handleCancelEdit() {
     setEditDailyLog(null);
   }
+  function handleBack() {
+    navigate(-1);
+  }
 
   function handleAddDailyLog() {
     navigate("/addDailyLog", {
@@ -141,12 +144,10 @@ const DailyLogs = () => {
     <div className="container mt-5" id="daily-logs">
       <h1>Daily Logs Report for {projectTitle}</h1>
       <div className="subheading">
-        <div></div>
-        <button
-          onClick={handleAddDailyLog}
-          id="log-add"
-          className="btn btn-primary"
-        >
+        <button onClick={handleBack} className="btn btn-secondary back">
+          Back
+        </button>
+        <button onClick={handleAddDailyLog} className="btn btn-primary add">
           Add Daily Log
         </button>
       </div>
@@ -282,7 +283,7 @@ const DailyLogs = () => {
             </button>
             <button
               type="button"
-              onClick={handleEditClick}
+              onClick={handleCancelEdit}
               className="btn btn-secondary"
             >
               Cancel

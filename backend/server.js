@@ -97,9 +97,9 @@ async function updateCompanyInfo() {
       LEFT JOIN 
         engineers e ON pae.engineer_id = e.engineer_id 
       GROUP BY 
-        p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location,
-        p.project_id;
-    `);
+        p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location
+      ORDER BY 
+        p.project_id;`);
   }
 
   projectsInfo = currProjectsInfo.rows;
@@ -845,6 +845,7 @@ app.get("/projectEntriesStatus", async (req, res) => {
   }
 });
 
+// Notifications
 app.get("/notifications", async (req, res) => {
   const { project_id } = req.query;
   try {
@@ -895,6 +896,21 @@ app.get("/missingLogs", async (req, res) => {
     res.json({ missingDailyLogs: missingDays });
   } catch (error) {
     console.error("Error calculating missing daily logs:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/addEngineer", async (req, res) => {
+  const { name, title } = req.body;
+
+  try {
+    const result = await db.query(
+      "INSERT INTO engineers (name, title) VALUES ($1, $2) RETURNING *",
+      [name, title]
+    );
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.error("Error adding engineer:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
