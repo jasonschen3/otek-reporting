@@ -151,8 +151,6 @@ app.post("/dailyLogs", async (req, res) => {
   const formattedToday = getFormattedDate(today);
   const formattedYesterday = getFormattedDate(yesterday);
 
-  // console.log("Today's date is: ", formattedToday);
-
   let currDailyLogsInfo = null;
 
   const baseQuery = `
@@ -164,7 +162,8 @@ app.post("/dailyLogs", async (req, res) => {
       dl.status_submitted, 
       dl.received_payment, 
       dl.hours, 
-      dl.pdf_url 
+      dl.pdf_url,
+      TO_CHAR(dl.date_submitted, 'YYYY-MM-DD') AS date_submitted
     FROM 
       daily_logs dl 
     JOIN 
@@ -180,17 +179,17 @@ app.post("/dailyLogs", async (req, res) => {
   if (action === "Yesterday") {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
     params = [projectId, formattedYesterday];
   } else if (action === "Today") {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
     params = [projectId, formattedToday];
   } else if (action === "View All") {
     query =
       baseQuery +
-      `GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date ORDER BY dl.daily_log_id;`;
+      `GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
     params = [projectId];
   } else {
     return res.status(400).send("Unknown action");
@@ -264,7 +263,7 @@ app.post("/expenses", async (req, res) => {
 });
 
 app.post("/editProjectDisplay", async (req, res) => {
-  console.log("Update posted");
+  // console.log("Update posted");
   const { ongoing, completed } = req.body;
 
   console.log("Ongoing:", ongoing);
@@ -519,26 +518,31 @@ app.post("/editDailyLog", async (req, res) => {
     daily_log_id,
   } = req.body;
 
+  let date_submitted = null;
+  if (status_submitted === "1") {
+    date_submitted = new Date().toISOString().split("T")[0]; // Current date in YYYY-MM-DD format
+  }
+  console.log("date submitted: ", date_submitted);
   try {
     const result = await db.query(
-      `UPDATE daily_logs SET log_date = $1, status_submitted = $2, received_payment = $3, hours = $4, pdf_url = $5 WHERE daily_log_id = $6 RETURNING *`,
+      `UPDATE daily_logs 
+       SET log_date = $1, status_submitted = $2, received_payment = $3, hours = $4, pdf_url = $5, date_submitted = COALESCE($6, date_submitted) 
+       WHERE daily_log_id = $7 
+       RETURNING *`,
       [
         log_date,
         status_submitted,
         received_payment,
         hours,
         pdf_url,
+        date_submitted,
         daily_log_id,
       ]
     );
-    let date_submitted = null;
-    if (status_submitted === "1") {
-      date_submitted = new Date().toISOString().split("T")[0]; // Set to today's date in YYYY-MM-DD format
-    }
     res.json(result.rows[0]);
   } catch (error) {
     console.error("Error updating daily log:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).send("Error updating daily log");
   }
 });
 
@@ -646,6 +650,8 @@ app.post("/addDailyLog", async (req, res) => {
     pdf_url,
   } = req.body;
 
+  const date_submitted = status_submitted === "1" ? new Date() : null;
+
   try {
     const result = await db.query(
       `INSERT INTO daily_logs (
@@ -655,8 +661,9 @@ app.post("/addDailyLog", async (req, res) => {
         status_submitted,
         received_payment,
         hours,
-        pdf_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        pdf_url,
+        date_submitted
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *`,
       [
         project_id,
@@ -666,8 +673,10 @@ app.post("/addDailyLog", async (req, res) => {
         received_payment,
         hours,
         pdf_url,
+        date_submitted,
       ]
     );
+
     res.status(200).json(result.rows[0]);
   } catch (err) {
     console.error("Error adding daily log:", err);
@@ -878,7 +887,7 @@ const isWeekend = (date) => {
 // Timer function that runs every hour
 const checkAndUpdateNotifications = async () => {
   try {
-    // Delete all
+    // Delete all notifications
     await db.query("DELETE FROM notifications");
 
     // Fetch all projects
@@ -908,7 +917,7 @@ const checkAndUpdateNotifications = async () => {
       const totalDays =
         Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
       const logsResult = await db.query(
-        `SELECT log_date FROM daily_logs WHERE project_id = $1`,
+        `SELECT log_date, status_submitted, received_payment FROM daily_logs WHERE project_id = $1`,
         [project_id]
       );
 
@@ -931,13 +940,36 @@ const checkAndUpdateNotifications = async () => {
           missingDates.push(formattedDate);
         }
       }
-
       // Add new notifications for missing dates
       for (const missingDate of missingDates) {
         await db.query(
           "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
           [1, missingDate, "Daily log missing for " + missingDate, project_id]
         );
+      }
+
+      // Check for daily logs where payment has not been received after 30 days
+      const now = new Date();
+      for (const log of logsResult.rows) {
+        console.log(log);
+        // BUG status_submitted and received_payment are bits
+        if (log.status_submitted === "1" && log.received_payment === "0") {
+          console.log("Missing  ");
+          const logDate = new Date(log.log_date);
+          const diffDays = Math.floor((now - logDate) / (1000 * 60 * 60 * 24));
+          console.log(diffDays, " diff days");
+          if (diffDays > 30) {
+            await db.query(
+              "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
+              [
+                2,
+                log.log_date,
+                "Payment not received for log on " + log.log_date,
+                project_id,
+              ]
+            );
+          }
+        }
       }
     }
 
@@ -956,13 +988,16 @@ setInterval(checkAndUpdateNotifications, 60 * 60 * 1000);
 // Initial call to start immediately
 checkAndUpdateNotifications();
 
-app.post("/updateNotifications", async (res) => {
+app.post("/updateNotifications", async (req, res) => {
   try {
     await checkAndUpdateNotifications();
     console.log("Updated Notifications");
-    res.json("Updated notifications");
+    res.json({ message: "Updated notifications" });
   } catch (err) {
     console.log("Error updating notifications ", err);
+    res
+      .status(500)
+      .json({ message: "Error updating notifications", error: err });
   }
 });
 

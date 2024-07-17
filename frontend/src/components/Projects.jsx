@@ -74,9 +74,12 @@ function Projects() {
       const type1Count = response.data.filter(
         (noti) => noti.noti_type === 1
       ).length;
+      const type2Count = response.data.filter(
+        (noti) => noti.noti_type === 2
+      ).length;
       setNotificationsCount((prev) => ({
         ...prev,
-        [projectId]: type1Count,
+        [projectId]: { type1: type1Count, type2: type2Count },
       }));
     } catch (error) {
       console.error("Error fetching notifications count:", error);
@@ -395,9 +398,18 @@ function Projects() {
               </td>
               <td className="notification">
                 <div>
-                  {notificationsCount[project.project_id] !== undefined
-                    ? `${notificationsCount[project.project_id]} missing logs`
-                    : ""}
+                  {notificationsCount[project.project_id] !== undefined ? (
+                    <>
+                      <div>{`${
+                        notificationsCount[project.project_id].type1
+                      } missing logs`}</div>
+                      <div>{`${
+                        notificationsCount[project.project_id].type2
+                      } missing expenses`}</div>
+                    </>
+                  ) : (
+                    ""
+                  )}
                 </div>
                 <button onClick={() => navigateToNotifications(project)}>
                   View Notifications

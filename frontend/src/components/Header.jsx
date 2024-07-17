@@ -6,7 +6,7 @@ const Header = () => {
   const stateData = { isAuthenticated: true };
   return (
     <div className="navbar navbar-dark bg-dark">
-      <img src="/public/otek-transparent.png" alt="Otek logo"></img>
+      <img src="/otek-transparent.png" alt="Otek logo"></img>
       <GlobalClock />
       <ul>
         <li>

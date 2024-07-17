@@ -1,30 +1,32 @@
 import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useNavigate, useLocation } from "react-router-dom";
 
-function AddDailyLog() {
+const AddDailyLog = () => {
   let ip = "http://localhost:3000";
-  const [message, setMessage] = useState("");
   const [newDailyLog, setNewDailyLog] = useState({
+    project_id: "",
     log_date: "",
     engineer_id: "",
-    status_submitted: false,
-    received_payment: false,
+    status_submitted: "0",
+    received_payment: "0",
     hours: "",
     pdf_url: "",
   });
   const [engineers, setEngineers] = useState([]);
-
-  // Use passed in vari from state
-  const nav = useNavigate();
+  const navigate = useNavigate();
   const location = useLocation();
   const { projectId, projectTitle, isAuthenticated } = location.state || {};
 
   useEffect(() => {
     if (!isAuthenticated) {
-      nav("/unauthorized");
+      navigate("/unauthorized");
       return;
     }
+    setNewDailyLog((prevState) => ({
+      ...prevState,
+      project_id: projectId,
+    }));
     const fetchEngineers = async () => {
       try {
         const res = await axios.get(`${ip}/engineers`);
@@ -35,50 +37,39 @@ function AddDailyLog() {
     };
 
     fetchEngineers();
-  }, []);
+  }, [isAuthenticated, projectId, navigate]);
 
-  const handleNewDailyLogChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const handleChange = (e) => {
+    const { name, value } = e.target;
     setNewDailyLog({
       ...newDailyLog,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: value,
     });
   };
 
   const handleAddDailyLog = async (e) => {
     e.preventDefault();
 
-    // Convert boolean fields to 1 or 0
-    const dailyLogData = {
+    const formattedLog = {
       ...newDailyLog,
-      project_id: projectId,
-      status_submitted: newDailyLog.status_submitted ? 1 : 0,
-      received_payment: newDailyLog.received_payment ? 1 : 0,
-      hours: newDailyLog.hours ? parseFloat(newDailyLog.hours) : null,
+      engineer_id: newDailyLog.engineer_id || null,
+      hours: newDailyLog.hours || 0,
     };
 
     try {
-      const response = await axios.post(`${ip}/addDailyLog`, dailyLogData);
+      const response = await axios.post(`${ip}/addDailyLog`, formattedLog);
       if (response.status === 200) {
-        setNewDailyLog({
-          log_date: "",
-          engineer_id: "",
-          status_submitted: false,
-          received_payment: false,
-          hours: "",
-          pdf_url: "",
-        });
-        nav(-1);
+        navigate(-1);
       } else {
-        setMessage("Failed to add daily log");
+        console.error("Failed to add daily log");
       }
     } catch (error) {
-      setMessage(error.response?.data?.message || "Error adding daily log");
       console.error("Error adding daily log:", error);
     }
   };
-  const handleCancelEdit = () => {
-    nav(-1);
+
+  const handleCancel = () => {
+    navigate(-1);
   };
 
   return (
@@ -90,7 +81,7 @@ function AddDailyLog() {
           type="date"
           name="log_date"
           value={newDailyLog.log_date}
-          onChange={handleNewDailyLogChange}
+          onChange={handleChange}
           className="form-control"
           required
         />
@@ -100,7 +91,7 @@ function AddDailyLog() {
         <select
           name="engineer_id"
           value={newDailyLog.engineer_id}
-          onChange={handleNewDailyLogChange}
+          onChange={handleChange}
           className="form-control"
           required
         >
@@ -114,21 +105,27 @@ function AddDailyLog() {
       </div>
       <div className="form-group">
         <label>Submitted</label>
-        <input
-          type="checkbox"
+        <select
           name="status_submitted"
-          checked={newDailyLog.status_submitted}
-          onChange={handleNewDailyLogChange}
-        />
+          value={newDailyLog.status_submitted}
+          onChange={handleChange}
+          className="form-control"
+        >
+          <option value="1">Yes</option>
+          <option value="0">No</option>
+        </select>
       </div>
       <div className="form-group">
-        <label>Reimbursed</label>
-        <input
-          type="checkbox"
+        <label>Received Payment</label>
+        <select
           name="received_payment"
-          checked={newDailyLog.received_payment}
-          onChange={handleNewDailyLogChange}
-        />
+          value={newDailyLog.received_payment}
+          onChange={handleChange}
+          className="form-control"
+        >
+          <option value="1">Yes</option>
+          <option value="0">No</option>
+        </select>
       </div>
       <div className="form-group">
         <label>Hours</label>
@@ -136,7 +133,7 @@ function AddDailyLog() {
           type="number"
           name="hours"
           value={newDailyLog.hours}
-          onChange={handleNewDailyLogChange}
+          onChange={handleChange}
           className="form-control"
         />
       </div>
@@ -146,7 +143,7 @@ function AddDailyLog() {
           type="text"
           name="pdf_url"
           value={newDailyLog.pdf_url}
-          onChange={handleNewDailyLogChange}
+          onChange={handleChange}
           className="form-control"
         />
       </div>
@@ -154,15 +151,14 @@ function AddDailyLog() {
         Add
       </button>
       <button
-        type="submit"
+        type="button"
         className="btn btn-secondary"
-        onClick={handleCancelEdit}
+        onClick={handleCancel}
       >
         Cancel
       </button>
-      <div>{message}</div>
     </form>
   );
-}
+};
 
 export default AddDailyLog;

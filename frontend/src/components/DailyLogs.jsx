@@ -159,6 +159,7 @@ const DailyLogs = () => {
             <th>Project Name</th>
             <th>Engineer</th>
             <th>Submitted</th>
+            <th>Date Submitted</th>
             <th>Received Payment</th>
             <th>Hours</th>
             <th>PDF</th>
@@ -187,6 +188,7 @@ const DailyLogs = () => {
                     : "[No engineers]"}
                 </td>
                 <td>{log.status_submitted === "1" ? "Yes" : "No"}</td>
+                <td>{log.date_submitted || ""}</td>
                 <td>{log.received_payment === "1" ? "Yes" : "No"}</td>
                 <td>{log.hours}</td>
                 <td>

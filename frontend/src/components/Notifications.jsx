@@ -25,7 +25,7 @@ const Notifications = () => {
     };
 
     fetchNotifications();
-  });
+  }, [isAuthenticated, nav, project]);
 
   function handleBack() {
     nav(-1);
@@ -41,8 +41,16 @@ const Notifications = () => {
     });
   }
 
-  function updateNotifications() {
-    axios.post(`${ip}/updateNotifications`);
+  async function updateNotifications() {
+    try {
+      await axios.post(`${ip}/updateNotifications`);
+      const response = await axios.get(`${ip}/notifications`, {
+        params: { project_id: project.project_id },
+      });
+      setNotifications(response.data);
+    } catch (error) {
+      console.error("Error updating notifications:", error);
+    }
   }
 
   return (
@@ -67,7 +75,6 @@ const Notifications = () => {
       <table className="table mt-3">
         <thead>
           <tr>
-            <th>Id</th>
             <th>Type</th>
             <th>Related Date</th>
             <th>Message</th>
@@ -76,7 +83,6 @@ const Notifications = () => {
         <tbody>
           {notifications.map((noti) => (
             <tr key={noti.noti_id}>
-              <td>{noti.noti_id}</td>
               <td>{noti.noti_type}</td>
               <td>{noti.formatted_date}</td>
               <td>{noti.noti_message}</td>
