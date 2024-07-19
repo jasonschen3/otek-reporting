@@ -9,11 +9,11 @@ const Notifications = () => {
   const [permissionLevel, setPermissionLevel] = useState(0);
   const location = useLocation();
   const nav = useNavigate();
-  const { isAuthenticated, project } = location.state || {};
+  const { project } = location.state || {};
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    if (!isAuthenticated || !token) {
+    if (!token) {
       nav("/unauthorized");
       return;
     }
@@ -34,7 +34,7 @@ const Notifications = () => {
     };
 
     fetchNotifications();
-  }, [isAuthenticated, nav, project, token]);
+  }, [nav, project, token]);
 
   const handleBack = () => {
     nav(-1);
@@ -46,7 +46,6 @@ const Notifications = () => {
         state: {
           projectId: project.project_id,
           projectTitle: project.project_name,
-          isAuthenticated: true,
         },
       });
     } else {

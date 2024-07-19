@@ -24,12 +24,12 @@ function AddExpense() {
   const [selectedDate, setSelectedDate] = useState("");
 
   const location = useLocation();
-  const { projectId, projectTitle, isAuthenticated } = location.state || {};
+  const { projectId, projectTitle } = location.state || {};
   const nav = useNavigate();
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    if (!isAuthenticated || !token) {
+    if (!token) {
       nav("/Unauthorized");
       return;
     }
@@ -45,7 +45,7 @@ function AddExpense() {
     };
 
     fetchEngineers();
-  }, [isAuthenticated, nav, ip]);
+  }, [nav, ip]);
 
   useEffect(() => {
     if (selectedDate) {
@@ -66,7 +66,7 @@ function AddExpense() {
 
       fetchDailyLogs();
     }
-  }, [projectId, selectedDate, ip]);
+  }, [projectId, selectedDate]);
 
   const handleNewExpenseChange = (e) => {
     const { name, value, type, checked } = e.target;

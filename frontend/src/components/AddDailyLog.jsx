@@ -16,11 +16,11 @@ const AddDailyLog = () => {
   const [engineers, setEngineers] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const { projectId, projectTitle, isAuthenticated } = location.state || {};
+  const { projectId, projectTitle } = location.state || {};
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    if (!isAuthenticated || !token) {
+    if (!token) {
       navigate("/unauthorized");
       return;
     }
@@ -42,7 +42,7 @@ const AddDailyLog = () => {
     };
 
     fetchEngineers();
-  }, [isAuthenticated, projectId, navigate, token]);
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

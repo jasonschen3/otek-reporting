@@ -4,28 +4,26 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
 const DailyLogs = () => {
-  let ip = "http://localhost:3000";
+  const ip = "http://localhost:3000";
   const [dailyLogs, setDailyLogs] = useState([]);
   const [projectTitle, setProjectTitle] = useState("");
   const [editDailyLog, setEditDailyLog] = useState(null);
-  const [permissionLevel, setPermissionLevel] = useState(0); // Store the user's permission level
+  const [permissionLevel, setPermissionLevel] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
-  const { projectId, action, isAuthenticated, highlightLogId } =
-    location.state || {};
+  const { projectId, action, highlightLogId } = location.state || {};
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    if (!isAuthenticated || !token) {
+    if (!token) {
       navigate("/unauthorized");
       return;
     }
 
-    // Decode token to get permission level
     const decoded = jwtDecode(token);
     setPermissionLevel(decoded.permission_level);
 
-    async function fetchDailyLogs() {
+    const fetchDailyLogs = async () => {
       try {
         const response = await axios.post(
           `${ip}/dailyLogs`,
@@ -45,9 +43,9 @@ const DailyLogs = () => {
       } catch (error) {
         console.error("Error fetching daily logs:", error);
       }
-    }
+    };
 
-    async function fetchProjectName() {
+    const fetchProjectName = async () => {
       try {
         const response = await axios.post(
           `${ip}/title`,
@@ -66,11 +64,11 @@ const DailyLogs = () => {
       } catch (error) {
         console.error("Error fetching project name:", error);
       }
-    }
+    };
 
     fetchDailyLogs();
     fetchProjectName();
-  }, [projectId, action, isAuthenticated, navigate, token]);
+  }, [projectId, action, navigate, token]);
 
   const handleCancelEdit = () => {
     setEditDailyLog(null);
@@ -81,66 +79,75 @@ const DailyLogs = () => {
   };
 
   const handleAddDailyLog = () => {
-    navigate("/addDailyLog", {
-      state: {
-        projectId: projectId,
-        projectTitle: projectTitle,
-        isAuthenticated: true,
-      },
-    });
+    if (permissionLevel >= 1) {
+      navigate("/addDailyLog", {
+        state: {
+          projectId: projectId,
+          projectTitle: projectTitle,
+        },
+      });
+    } else {
+      alert("You do not have permission to add daily logs.");
+    }
   };
 
   const handleDeleteClick = async (logId) => {
-    const token = localStorage.getItem("token");
-    const isConfirmed = window.confirm(
-      "Are you sure you want to delete this daily log?"
-    );
-    if (isConfirmed) {
-      try {
-        await axios.post(
-          `${ip}/deleteMarkedDailyLogs`,
-          {
-            dailyLogIds: [logId],
-          },
-          {
-            headers: { "access-token": token },
+    if (permissionLevel >= 2) {
+      const isConfirmed = window.confirm(
+        "Are you sure you want to delete this daily log?"
+      );
+      if (isConfirmed) {
+        try {
+          await axios.post(
+            `${ip}/deleteMarkedDailyLogs`,
+            {
+              dailyLogIds: [logId],
+            },
+            {
+              headers: { "access-token": token },
+            }
+          );
+          const response = await axios.post(
+            `${ip}/dailyLogs`,
+            {
+              project_id: projectId,
+              action: action,
+            },
+            {
+              headers: { "access-token": token },
+            }
+          );
+          if (response.status === 200) {
+            setDailyLogs(response.data);
+          } else {
+            console.error("Failed to fetch updated daily logs");
           }
-        );
-        const response = await axios.post(
-          `${ip}/dailyLogs`,
-          {
-            project_id: projectId,
-            action: action,
-          },
-          {
-            headers: { "access-token": token },
+        } catch (error) {
+          if (axios.isAxiosError(error)) {
+            alert("Must delete associated expenses first");
+            console.error("Error confirming delete:", error.message);
+          } else {
+            console.error("Unexpected error:", error);
           }
-        );
-
-        if (response.status === 200) {
-          setDailyLogs(response.data);
-        } else {
-          console.error("Failed to fetch updated daily logs");
-        }
-      } catch (error) {
-        if (axios.isAxiosError(error)) {
-          alert("Must delete associated expenses first");
-          console.error("Error confirming delete:", error.message);
-        } else {
-          console.error("Unexpected error:", error);
         }
       }
+    } else {
+      alert("You do not have permission to delete daily logs.");
     }
   };
 
   const handleEditClick = (log) => {
-    setEditDailyLog({ ...log });
-    setTimeout(() => {
-      const element = document.getElementById("editLog");
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
-    }, 0);
+    if (permissionLevel >= 2) {
+      setEditDailyLog({ ...log });
+      setTimeout(() => {
+        const element = document.getElementById("editLog");
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 0);
+    } else {
+      alert("You do not have permission to edit daily logs.");
+    }
   };
 
   const handleChange = (event) => {
@@ -177,6 +184,13 @@ const DailyLogs = () => {
     } catch (error) {
       console.error("Error updating daily log:", error);
     }
+  };
+
+  const formatUrl = (url) => {
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      return `http://${url}`;
+    }
+    return url;
   };
 
   return (
@@ -233,13 +247,15 @@ const DailyLogs = () => {
                 <td>{log.received_payment === "1" ? "Yes" : "No"}</td>
                 <td>{log.hours}</td>
                 <td>
-                  <a
-                    href={log.pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    PDF
-                  </a>
+                  {log.pdf_url && (
+                    <a
+                      href={formatUrl(log.pdf_url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      PDF
+                    </a>
+                  )}
                 </td>
                 <td>
                   {permissionLevel >= 2 && (

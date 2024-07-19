@@ -8,11 +8,11 @@ function EditEngineers() {
   const [assignedEngineers, setAssignedEngineers] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const { project, isAuthenticated } = location.state || {};
+  const { project } = location.state || {};
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    if (!isAuthenticated || !token) {
+    if (!token) {
       navigate("/unauthorized");
       return;
     }
@@ -44,7 +44,7 @@ function EditEngineers() {
 
     fetchEngineers();
     fetchAssignedEngineers();
-  }, [project.project_id, navigate, isAuthenticated, token]);
+  }, [project.project_id, navigate, token]);
 
   const handleCancelEdit = () => {
     navigate(-1);

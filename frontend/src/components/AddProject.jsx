@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 function AddProject() {
@@ -15,14 +15,11 @@ function AddProject() {
     engineer_ids: [],
   });
   const [engineers, setEngineers] = useState([]);
-
   const nav = useNavigate();
-  const location = useLocation();
-  const { isAuthenticated } = location.state || {};
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!isAuthenticated || !token) {
+    if (!token) {
       nav("/unauthorized");
       return;
     }
@@ -60,7 +57,6 @@ function AddProject() {
 
   const handleAddProject = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
     try {
       const response = await axios.post(
         `${ip}/addProject`,

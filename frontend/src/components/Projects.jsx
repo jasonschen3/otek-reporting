@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 
@@ -14,82 +14,76 @@ function Projects() {
   const [permissionLevel, setPermissionLevel] = useState(0); // Store the user's permission level
 
   const navigate = useNavigate();
-  const location = useLocation();
-
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    if (location.state?.isAuthenticated && token) {
-      // Decode token to get permission level
-      const decoded = jwtDecode(token);
-      setPermissionLevel(decoded.permission_level);
-
-      axios
-        .post(
-          `${ip}/updateProjectDisplay`,
-          { ongoing: true, completed: false },
-          {
-            headers: {
-              "access-token": token,
-            },
-          }
-        )
-        .then((res) =>
-          axios.get(`${ip}/projects`, {
-            headers: {
-              "access-token": token,
-            },
-          })
-        )
-        .then((res) => {
-          setProjects(res.data);
-          return axios.all([
-            axios.get(`${ip}/projectEntriesStatus?checkExpenses=false`, {
-              headers: {
-                "access-token": token,
-              },
-            }),
-            axios.get(`${ip}/projectEntriesStatus?checkExpenses=true`, {
-              headers: {
-                "access-token": token,
-              },
-            }),
-          ]);
-        })
-        .then(
-          axios.spread((entriesRes, expensesRes) => {
-            const entriesStatusData = entriesRes.data.reduce((acc, status) => {
-              acc[status.project_id] = {
-                today: status.today,
-                yesterday: status.yesterday,
-              };
-              return acc;
-            }, {});
-            setEntriesStatus(entriesStatusData);
-
-            const expensesStatusData = expensesRes.data.reduce(
-              (acc, status) => {
-                acc[status.project_id] = {
-                  today: status.today,
-                  yesterday: status.yesterday,
-                };
-                return acc;
-              },
-              {}
-            );
-            setExpensesStatus(expensesStatusData);
-          })
-        )
-        .catch((err) => {
-          console.error("Error fetching project data:", err);
-          if (err.response && err.response.status === 401) {
-            navigate("/login");
-          }
-        });
-    } else {
+    if (!token) {
       navigate("/login");
     }
-  }, [location.state?.isAuthenticated, navigate]);
+    // Decode token to get permission level
+    const decoded = jwtDecode(token);
+    setPermissionLevel(decoded.permission_level);
+
+    axios
+      .post(
+        `${ip}/updateProjectDisplay`,
+        { ongoing: true, completed: false },
+        {
+          headers: {
+            "access-token": token,
+          },
+        }
+      )
+      .then((res) =>
+        axios.get(`${ip}/projects`, {
+          headers: {
+            "access-token": token,
+          },
+        })
+      )
+      .then((res) => {
+        setProjects(res.data);
+        return axios.all([
+          axios.get(`${ip}/projectEntriesStatus?checkExpenses=false`, {
+            headers: {
+              "access-token": token,
+            },
+          }),
+          axios.get(`${ip}/projectEntriesStatus?checkExpenses=true`, {
+            headers: {
+              "access-token": token,
+            },
+          }),
+        ]);
+      })
+      .then(
+        axios.spread((entriesRes, expensesRes) => {
+          const entriesStatusData = entriesRes.data.reduce((acc, status) => {
+            acc[status.project_id] = {
+              today: status.today,
+              yesterday: status.yesterday,
+            };
+            return acc;
+          }, {});
+          setEntriesStatus(entriesStatusData);
+
+          const expensesStatusData = expensesRes.data.reduce((acc, status) => {
+            acc[status.project_id] = {
+              today: status.today,
+              yesterday: status.yesterday,
+            };
+            return acc;
+          }, {});
+          setExpensesStatus(expensesStatusData);
+        })
+      )
+      .catch((err) => {
+        console.error("Error fetching project data:", err);
+        if (err.response && err.response.status === 401) {
+          navigate("/login");
+        }
+      });
+  }, [navigate]);
 
   const fetchNotificationsCount = async (projectId) => {
     try {
@@ -133,7 +127,7 @@ function Projects() {
   };
 
   const handleAddProject = async () => {
-    navigate("/addProject", { state: { isAuthenticated: true } });
+    navigate("/addProject");
   };
 
   const handleSave = async () => {
@@ -261,31 +255,28 @@ function Projects() {
       state: {
         projectId,
         action,
-        isAuthenticated: true,
       },
     });
   };
 
   const navigateToExpenses = (project, action) => {
     navigate("/expenses", {
-      state: { project, action, isAuthenticated: true },
+      state: { project, action },
     });
   };
 
   const navigateToNotifications = (project) => {
-    navigate("/notifications", { state: { project, isAuthenticated: true } });
+    navigate("/notifications", { state: { project } });
   };
 
   const navigateToEditEngineers = (project) => {
     navigate("/editEngineers", {
-      state: { project, isAuthenticated: true },
+      state: { project },
     });
   };
 
   const navigateToAddEngineers = () => {
-    navigate("/addEngineers", {
-      state: { isAuthenticated: true },
-    });
+    navigate("/addEngineers");
   };
 
   const handleDeleteClick = async (projectId) => {
@@ -377,17 +368,17 @@ function Projects() {
       <table className="table mt-3">
         <thead>
           <tr>
-            <th>Project ID</th>
+            <th>ID</th>
             <th>Project Name</th>
             <th>Project Status</th>
             <th>Start Date</th>
             <th>End Date</th>
-            <th>Details</th>
+            <th className="wider-col">Details</th>
             <th>Location</th>
-            <th>Engineer Names</th>
+            <th className="wider-col">Engineer Names</th>
             <th>Daily Logs</th>
             <th>Expenses</th>
-            <th className="notification">Notifications</th>
+            <th className="wider-col">Notifications</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -399,9 +390,9 @@ function Projects() {
               <td>{project.project_status === 1 ? "Ongoing" : "Complete"}</td>
               <td>{project.start_date}</td>
               <td>{project.end_date}</td>
-              <td>{project.details}</td>
+              <td className="wider-col">{project.details}</td>
               <td>{project.location}</td>
-              <td>
+              <td className="wider-col">
                 {project.engineer_names.split(", ").map((name, index) => (
                   <span key={index} className="engineer-name">
                     <div style={{ display: "block" }}>
@@ -468,7 +459,7 @@ function Projects() {
                   View All
                 </button>
               </td>
-              <td className="notification">
+              <td className="wider-col">
                 <div>
                   {notificationsCount[project.project_id] !== undefined ? (
                     <>

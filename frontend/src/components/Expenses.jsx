@@ -4,17 +4,17 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
 const Expenses = () => {
-  let ip = "http://localhost:3000";
+  const ip = "http://localhost:3000";
   const [expenses, setExpenses] = useState([]);
   const [editExpense, setEditExpense] = useState(null);
   const [permissionLevel, setPermissionLevel] = useState(0);
   const location = useLocation();
-  const { project, action, isAuthenticated } = location.state || {};
+  const { project, action } = location.state || {};
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    if (!isAuthenticated || !token) {
+    if (!token) {
       navigate("/unauthorized");
       return;
     }
@@ -45,26 +45,33 @@ const Expenses = () => {
       }
     }
     fetchExpenses();
-  }, [project, action, isAuthenticated, navigate, token]);
+  }, [project, action, navigate, token]);
 
   const handleAddExpense = () => {
-    navigate("/addExpense", {
-      state: {
-        projectId: project.project_id,
-        projectTitle: project.project_name,
-        isAuthenticated: true,
-      },
-    });
+    if (permissionLevel >= 1) {
+      navigate("/addExpense", {
+        state: {
+          projectId: project.project_id,
+          projectTitle: project.project_name,
+        },
+      });
+    } else {
+      alert("You do not have permission to add expenses.");
+    }
   };
 
   const handleEditClick = (expense) => {
-    setEditExpense({ ...expense });
-    setTimeout(() => {
-      const element = document.getElementById("editExpense");
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
-    }, 0);
+    if (permissionLevel >= 2) {
+      setEditExpense({ ...expense });
+      setTimeout(() => {
+        const element = document.getElementById("editExpense");
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 0);
+    } else {
+      alert("You do not have permission to edit expenses.");
+    }
   };
 
   const handleCancelEdit = () => {
@@ -76,44 +83,47 @@ const Expenses = () => {
   };
 
   const handleDeleteClick = async (expenseId) => {
-    const token = localStorage.getItem("token");
-    const isConfirmed = window.confirm(
-      "Are you sure you want to delete this expense?"
-    );
-    if (isConfirmed) {
-      try {
-        await axios.post(
-          `${ip}/deleteMarkedExpenses`,
-          {
-            expenseIds: [expenseId],
-          },
-          {
-            headers: { "access-token": token },
+    if (permissionLevel >= 2) {
+      const isConfirmed = window.confirm(
+        "Are you sure you want to delete this expense?"
+      );
+      if (isConfirmed) {
+        try {
+          await axios.post(
+            `${ip}/deleteMarkedExpenses`,
+            {
+              expenseIds: [expenseId],
+            },
+            {
+              headers: { "access-token": token },
+            }
+          );
+          const response = await axios.post(
+            `${ip}/expenses`,
+            {
+              project_id: project.project_id,
+              action: action,
+            },
+            {
+              headers: { "access-token": token },
+            }
+          );
+          if (response.status === 200) {
+            setExpenses(response.data);
+          } else {
+            console.error("Failed to fetch updated expenses");
           }
-        );
-        const response = await axios.post(
-          `${ip}/expenses`,
-          {
-            project_id: project.project_id,
-            action: action,
-          },
-          {
-            headers: { "access-token": token },
+        } catch (error) {
+          if (axios.isAxiosError(error)) {
+            alert("Error confirming delete");
+            console.error("Error confirming delete:", error.message);
+          } else {
+            console.error("Unexpected error:", error);
           }
-        );
-        if (response.status === 200) {
-          setExpenses(response.data);
-        } else {
-          console.error("Failed to fetch updated expenses");
-        }
-      } catch (error) {
-        if (axios.isAxiosError(error)) {
-          alert("Error confirming delete");
-          console.error("Error confirming delete:", error.message);
-        } else {
-          console.error("Unexpected error:", error);
         }
       }
+    } else {
+      alert("You do not have permission to delete expenses.");
     }
   };
 
@@ -122,7 +132,6 @@ const Expenses = () => {
       state: {
         projectId: project.project_id,
         action: "View All",
-        isAuthenticated: true,
         highlightLogId: dailyLogId,
       },
     });
@@ -137,8 +146,6 @@ const Expenses = () => {
   };
 
   const handleSave = async () => {
-    const token = localStorage.getItem("token");
-
     try {
       const response = await axios.post(
         `${ip}/editExpense`,
@@ -166,6 +173,13 @@ const Expenses = () => {
     } catch (error) {
       console.error("Error updating expense:", error);
     }
+  };
+
+  const formatUrl = (url) => {
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      return `http://${url}`;
+    }
+    return url;
   };
 
   return (
@@ -239,13 +253,15 @@ const Expenses = () => {
                 <td>{expense.status2 === "1" ? "Yes" : "No"}</td>
                 <td>{expense.status3 === "1" ? "Yes" : "No"}</td>
                 <td>
-                  <a
-                    href={expense.pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    PDF
-                  </a>
+                  {expense.pdf_url && (
+                    <a
+                      href={formatUrl(expense.pdf_url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      PDF
+                    </a>
+                  )}
                 </td>
                 <td>
                   {permissionLevel >= 2 && (

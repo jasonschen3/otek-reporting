@@ -3,7 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./components/Login";
-import Register from "./components/Register";
+// import Register from "./components/Register";
 import Projects from "./components/Projects";
 import DailyLogs from "./components/DailyLogs";
 import AddProject from "./components/AddProject";
