@@ -1,24 +1,30 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 const Expenses = () => {
   let ip = "http://localhost:3000";
   const [expenses, setExpenses] = useState([]);
   const [editExpense, setEditExpense] = useState(null);
+  const [permissionLevel, setPermissionLevel] = useState(0);
   const location = useLocation();
   const { project, action, isAuthenticated } = location.state || {};
   const navigate = useNavigate();
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    if (!isAuthenticated || !token) {
+      navigate("/unauthorized");
+      return;
+    }
+
+    // Decode token to get permission level
+    const decoded = jwtDecode(token);
+    setPermissionLevel(decoded.permission_level);
 
     async function fetchExpenses() {
       try {
-        if (!isAuthenticated) {
-          navigate("/unauthorized");
-          return;
-        }
         const response = await axios.post(
           `${ip}/expenses`,
           {
@@ -30,7 +36,6 @@ const Expenses = () => {
           }
         );
         if (response.status === 200) {
-          console.log("Expenses data:", response.data);
           setExpenses(response.data);
         } else {
           console.error("Failed to fetch expenses");
@@ -40,9 +45,9 @@ const Expenses = () => {
       }
     }
     fetchExpenses();
-  }, [project, action, isAuthenticated, navigate]);
+  }, [project, action, isAuthenticated, navigate, token]);
 
-  function handleAddExpense() {
+  const handleAddExpense = () => {
     navigate("/addExpense", {
       state: {
         projectId: project.project_id,
@@ -50,30 +55,28 @@ const Expenses = () => {
         isAuthenticated: true,
       },
     });
-  }
+  };
 
-  function handleEditClick(expense) {
+  const handleEditClick = (expense) => {
     setEditExpense({ ...expense });
-    // Scroll to the edit project form
     setTimeout(() => {
       const element = document.getElementById("editExpense");
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
       }
     }, 0);
-  }
+  };
 
-  function handleCancelEdit() {
+  const handleCancelEdit = () => {
     setEditExpense(null);
-  }
+  };
 
-  function handleBack() {
+  const handleBack = () => {
     navigate(-1);
-  }
+  };
 
-  async function handleDeleteClick(expenseId) {
+  const handleDeleteClick = async (expenseId) => {
     const token = localStorage.getItem("token");
-
     const isConfirmed = window.confirm(
       "Are you sure you want to delete this expense?"
     );
@@ -98,7 +101,6 @@ const Expenses = () => {
             headers: { "access-token": token },
           }
         );
-
         if (response.status === 200) {
           setExpenses(response.data);
         } else {
@@ -113,7 +115,7 @@ const Expenses = () => {
         }
       }
     }
-  }
+  };
 
   const handleDailyLogClick = (dailyLogId) => {
     navigate("/dailyLogs", {
@@ -174,9 +176,11 @@ const Expenses = () => {
         <button onClick={handleBack} className="btn btn-secondary back">
           Back
         </button>
-        <button onClick={handleAddExpense} className="btn btn-primary add">
-          Add Expense
-        </button>
+        {permissionLevel >= 1 && (
+          <button onClick={handleAddExpense} className="btn btn-primary add">
+            Add Expense
+          </button>
+        )}
       </div>
 
       <table className="table mt-3">
@@ -244,10 +248,18 @@ const Expenses = () => {
                   </a>
                 </td>
                 <td>
-                  <button onClick={() => handleEditClick(expense)}>Edit</button>
-                  <button onClick={() => handleDeleteClick(expense.expense_id)}>
-                    Delete
-                  </button>
+                  {permissionLevel >= 2 && (
+                    <>
+                      <button onClick={() => handleEditClick(expense)}>
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(expense.expense_id)}
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))

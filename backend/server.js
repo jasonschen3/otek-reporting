@@ -2,9 +2,6 @@ import express from "express";
 import bodyParser from "body-parser";
 import pg from "pg";
 import bcrypt from "bcrypt";
-// import passport from "passport";
-// import LocalStrategy from "passport-local";
-// import session from "express-session";
 import env from "dotenv";
 import moment from "moment-timezone";
 import cors from "cors";
@@ -24,18 +21,6 @@ app.use(cors());
 app.use(express.static("public"));
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-// app.use(
-//   session({
-//     secret: process.env.SESSION_KEY,
-//     resave: false,
-//     saveUninitialized: true,
-//     cookie: { secure: false }, // Ensure secure is false for development (http)
-//   })
-// );
-
-// app.use(passport.initialize());
-// app.use(passport.session());
 
 const db = new pg.Client({
   user: process.env.PG_USER,
@@ -79,19 +64,19 @@ function verifyToken(req, res, next) {
   });
 }
 
-function checkPermissionLevel(requiredLevel) {
-  console.log("Checking permission levels");
+function checkPermissionLevel(minRequiredLevel) {
   return (req, res, next) => {
     const userPermissionLevel = req.user.permission_level;
-    if (userPermissionLevel >= requiredLevel) {
+    if (userPermissionLevel >= minRequiredLevel) {
       next();
     } else {
       console.log("Level isn't sufficient");
-      res.status(403).send("You do not have the required permission level");
+      res
+        .status(403)
+        .json({ message: "You do not have the required permission level" });
     }
   };
 }
-
 // Function to compare the password
 async function comparePassword(plainPassword, hashedPassword) {
   const isMatch = await bcrypt.compare(plainPassword, hashedPassword);
@@ -125,79 +110,6 @@ app.post("/login", async (req, res) => {
     return res.status(500).send("Internal server error");
   }
 });
-
-// // Passport strategy
-// passport.use(
-//   new LocalStrategy(
-//     { usernameField: "username", passwordField: "password" },
-//     async (username, password, cb) => {
-//       try {
-//         const result = await db.query(
-//           "SELECT * FROM users WHERE username = $1",
-//           [username]
-//         );
-//         if (result.rows.length > 0) {
-//           const user = result.rows[0];
-//           console.log("user in strat ", user);
-//           const storedHashedPassword = user.password;
-//           bcrypt.compare(password, storedHashedPassword, (err, valid) => {
-//             if (err) {
-//               console.error("Error comparing passwords:", err);
-//               return cb(err);
-//             }
-//             if (valid) {
-//               console.log("Valid password ");
-//               return cb(null, user);
-//             } else {
-//               return cb(null, false, { message: "Incorrect password" });
-//             }
-//           });
-//         } else {
-//           return cb(null, false, { message: "User not found" });
-//         }
-//       } catch (err) {
-//         console.log(err);
-//         return cb(err);
-//       }
-//     }
-//   )
-// );
-
-// // Determines which data should be stored in session
-// passport.serializeUser((user, cb) => {
-//   console.log("Serialized ", user);
-//   cb(null, user.id);
-// });
-
-// passport.deserializeUser(async (id, cb) => {
-//   console.log("Deserialize ", id);
-//   try {
-//     const result = await db.query("SELECT * FROM users WHERE id = $1", [id]);
-//     const user = result.rows[0];
-//     console.log("DESERIALIZE ", user);
-//     cb(null, user);
-//   } catch (err) {
-//     cb(err);
-//   }
-// });
-//
-// // Middleware to log session and user information
-// app.use((req, res, next) => {
-//   console.log("Session:", req.session);
-//   console.log("User:", req.user); // GIVING undefined
-//   next();
-// });
-
-// const checkAuthentication = (req, res, next) => {
-//   console.log("CHECK ", req.isAuthenticated());
-//   if (req.isAuthenticated()) {
-//     console.log("Is authenticated");
-//     return next();
-//   } else {
-//     console.log("unauthorized");
-//     res.status(401).json({ error: "Unauthorized" });
-//   }
-// };
 
 async function updateCompanyInfo() {
   let currProjectsInfo = null;
@@ -406,25 +318,30 @@ app.post("/expenses", verifyToken, async (req, res) => {
   res.json(expensesInfo);
 });
 
-app.post("/editProjectDisplay", verifyToken, async (req, res) => {
-  // console.log("Update posted");
-  const { ongoing, completed } = req.body;
+app.post(
+  "/editProjectDisplay",
+  verifyToken,
+  checkPermissionLevel(2),
+  async (req, res) => {
+    // console.log("Update posted");
+    const { ongoing, completed } = req.body;
 
-  console.log("Ongoing:", ongoing);
-  console.log("Completed:", completed);
+    console.log("Ongoing:", ongoing);
+    console.log("Completed:", completed);
 
-  if (ongoing && completed) {
-    projectDisplayStatus = 3; // display all
-  } else if (ongoing) {
-    projectDisplayStatus = 1; // display ongoing
-  } else if (completed) {
-    projectDisplayStatus = 2; // display completed
-  } else {
-    projectDisplayStatus = 0; // display none
+    if (ongoing && completed) {
+      projectDisplayStatus = 3; // display all
+    } else if (ongoing) {
+      projectDisplayStatus = 1; // display ongoing
+    } else if (completed) {
+      projectDisplayStatus = 2; // display completed
+    } else {
+      projectDisplayStatus = 0; // display none
+    }
+
+    res.redirect("/projects");
   }
-
-  res.redirect("/projects");
-});
+);
 
 // Toggle what to display based on status
 app.post("/updateProjectDisplay", verifyToken, async (req, res) => {
@@ -488,37 +405,42 @@ app.post("/updateProjectDisplay", verifyToken, async (req, res) => {
 // });
 
 // Edit functionality
-app.post("/editProject", verifyToken, async (req, res) => {
-  const {
-    project_id,
-    project_name,
-    project_status,
-    start_date,
-    end_date,
-    details,
-    location,
-  } = req.body;
+app.post(
+  "/editProject",
+  verifyToken,
+  checkPermissionLevel(2),
+  async (req, res) => {
+    const {
+      project_id,
+      project_name,
+      project_status,
+      start_date,
+      end_date,
+      details,
+      location,
+    } = req.body;
 
-  try {
-    const result = await db.query(
-      `UPDATE projects SET project_name = $1, project_status = $2, start_date = $3, end_date = $4, details = $5, location = $6 WHERE project_id = $7 RETURNING *`,
-      [
-        project_name,
-        project_status,
-        start_date,
-        end_date,
-        details,
-        location,
-        project_id,
-      ]
-    );
-    // console.log(result.rows[0]);
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error("Error updating project:", error);
-    res.status(500).json({ message: "Server error" });
+    try {
+      const result = await db.query(
+        `UPDATE projects SET project_name = $1, project_status = $2, start_date = $3, end_date = $4, details = $5, location = $6 WHERE project_id = $7 RETURNING *`,
+        [
+          project_name,
+          project_status,
+          start_date,
+          end_date,
+          details,
+          location,
+          project_id,
+        ]
+      );
+      // console.log(result.rows[0]);
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error("Error updating project:", error);
+      res.status(500).json({ message: "Server error" });
+    }
   }
-});
+);
 
 app.get("/projects_assign_engineers", verifyToken, async (req, res) => {
   const { project_id } = req.query;
@@ -535,105 +457,120 @@ app.get("/projects_assign_engineers", verifyToken, async (req, res) => {
   }
 });
 
-app.post("/updateProjectEngineers", verifyToken, async (req, res) => {
-  const { project_id, engineer_ids } = req.body;
+app.post(
+  "/updateProjectEngineers",
+  verifyToken,
+  checkPermissionLevel(2),
+  async (req, res) => {
+    const { project_id, engineer_ids } = req.body;
 
-  // console.log("pae backend", req.body);
-  try {
-    // Delete all existing engineer assignments for the project
-    const deleteQuery = await db.query(
-      `DELETE FROM projects_assign_engineers WHERE project_id = $1 RETURNING *`,
-      [project_id]
-    );
-    console.log("Deleted,", deleteQuery.rows);
-    // Insert the new engineer assignments
-    for (const engineer_id of engineer_ids) {
-      const inserted = await db.query(
-        `INSERT INTO projects_assign_engineers (project_id, engineer_id) VALUES ($1, $2) RETURNING *`,
-        [project_id, engineer_id]
+    // console.log("pae backend", req.body);
+    try {
+      // Delete all existing engineer assignments for the project
+      const deleteQuery = await db.query(
+        `DELETE FROM projects_assign_engineers WHERE project_id = $1 RETURNING *`,
+        [project_id]
       );
-      console.log("inserted ", inserted.rows);
+      console.log("Deleted,", deleteQuery.rows);
+      // Insert the new engineer assignments
+      for (const engineer_id of engineer_ids) {
+        const inserted = await db.query(
+          `INSERT INTO projects_assign_engineers (project_id, engineer_id) VALUES ($1, $2) RETURNING *`,
+          [project_id, engineer_id]
+        );
+        console.log("inserted ", inserted.rows);
+      }
+
+      res.json({ message: "Engineers updated successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
     }
-
-    res.json({ message: "Engineers updated successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
   }
-});
+);
 
-app.post("/editExpense", verifyToken, async (req, res) => {
-  const {
-    expense_id,
-    expense_date,
-    expense_type,
-    expense_details,
-    amount,
-    is_billable,
-    status1,
-    status2,
-    status3,
-    pdf_url,
-  } = req.body;
+app.post(
+  "/editExpense",
+  verifyToken,
+  checkPermissionLevel(2),
+  async (req, res) => {
+    const {
+      expense_id,
+      expense_date,
+      expense_type,
+      expense_details,
+      amount,
+      is_billable,
+      status1,
+      status2,
+      status3,
+      pdf_url,
+    } = req.body;
 
-  try {
-    const result = await db.query(
-      `UPDATE expenses SET expense_date = $1, expense_type = $2, expense_details = $3, amount = $4, is_billable = $5, status1 = $6, status2 = $7, status3 = $8, pdf_url = $9 WHERE expense_id = $10 RETURNING *`,
-      [
-        expense_date,
-        expense_type,
-        expense_details,
-        amount,
-        is_billable,
-        status1,
-        status2,
-        status3,
-        pdf_url,
-        expense_id,
-      ]
-    );
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error("Error updating expense:", error);
-    res.status(500).json({ message: "Server error" });
+    try {
+      const result = await db.query(
+        `UPDATE expenses SET expense_date = $1, expense_type = $2, expense_details = $3, amount = $4, is_billable = $5, status1 = $6, status2 = $7, status3 = $8, pdf_url = $9 WHERE expense_id = $10 RETURNING *`,
+        [
+          expense_date,
+          expense_type,
+          expense_details,
+          amount,
+          is_billable,
+          status1,
+          status2,
+          status3,
+          pdf_url,
+          expense_id,
+        ]
+      );
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error("Error updating expense:", error);
+      res.status(500).json({ message: "Server error" });
+    }
   }
-});
+);
 
-app.post("/editDailyLog", verifyToken, async (req, res) => {
-  const {
-    log_date,
-    status_submitted,
-    received_payment,
-    hours,
-    pdf_url,
-    daily_log_id,
-  } = req.body;
+app.post(
+  "/editDailyLog",
+  verifyToken,
+  checkPermissionLevel(2),
+  async (req, res) => {
+    const {
+      log_date,
+      status_submitted,
+      received_payment,
+      hours,
+      pdf_url,
+      daily_log_id,
+    } = req.body;
 
-  let date_submitted = null;
-  if (status_submitted === "1") {
-    date_submitted = new Date().toISOString().split("T")[0]; // Current date in YYYY-MM-DD format
-  }
-  try {
-    const result = await db.query(
-      `UPDATE daily_logs 
+    let date_submitted = null;
+    if (status_submitted === "1") {
+      date_submitted = new Date().toISOString().split("T")[0]; // Current date in YYYY-MM-DD format
+    }
+    try {
+      const result = await db.query(
+        `UPDATE daily_logs 
        SET log_date = $1, status_submitted = $2, received_payment = $3, hours = $4, pdf_url = $5, date_submitted = COALESCE($6, date_submitted) 
        WHERE daily_log_id = $7 
        RETURNING *`,
-      [
-        log_date,
-        status_submitted,
-        received_payment,
-        hours,
-        pdf_url,
-        date_submitted,
-        daily_log_id,
-      ]
-    );
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error("Error updating daily log:", error);
-    res.status(500).send("Error updating daily log");
+        [
+          log_date,
+          status_submitted,
+          received_payment,
+          hours,
+          pdf_url,
+          date_submitted,
+          daily_log_id,
+        ]
+      );
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error("Error updating daily log:", error);
+      res.status(500).send("Error updating daily log");
+    }
   }
-});
+);
 
 // Title functionality
 app.post("/title", verifyToken, async (req, res) => {
@@ -683,67 +620,76 @@ app.get("/dailyLogs", verifyToken, async (req, res) => {
   }
 });
 
-app.post("/addProject", verifyToken, async (req, res) => {
-  let {
-    project_name,
-    project_status,
-    start_date,
-    end_date,
-    details,
-    location,
-    engineer_ids,
-  } = req.body;
+app.post(
+  "/addProject",
+  verifyToken,
+  checkPermissionLevel(2),
+  async (req, res) => {
+    let {
+      project_name,
+      project_status,
+      start_date,
+      end_date,
+      details,
+      location,
+      engineer_ids,
+    } = req.body;
 
-  try {
-    // Error if date is "" instead of null
-    start_date = start_date === "" ? null : start_date;
-    end_date = end_date === "" ? null : end_date;
+    try {
+      // Error if date is "" instead of null
+      start_date = start_date === "" ? null : start_date;
+      end_date = end_date === "" ? null : end_date;
 
-    const newProjectResult = await db.query(
-      `INSERT INTO projects (project_name, project_status, start_date, end_date, details, location)
+      const newProjectResult = await db.query(
+        `INSERT INTO projects (project_name, project_status, start_date, end_date, details, location)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [project_name, project_status, start_date, end_date, details, location]
-    );
-
-    const newProject = newProjectResult.rows[0];
-    console.log(newProject);
-
-    // Insert the engineer assignments into the projects_assign_engineers table
-    const engineerAssignments = engineer_ids.map((engineer_id) => {
-      return db.query(
-        `INSERT INTO projects_assign_engineers (project_id, engineer_id)
-         VALUES ($1, $2)`,
-        [newProject.project_id, engineer_id]
+        [project_name, project_status, start_date, end_date, details, location]
       );
-    });
 
-    // Research this
-    await Promise.all(engineerAssignments);
+      const newProject = newProjectResult.rows[0];
+      console.log(newProject);
 
-    res.status(200).json(newProject);
-  } catch (error) {
-    console.error("Error adding project:", error);
-    res.status(500).send("Error adding project");
+      // Insert the engineer assignments into the projects_assign_engineers table
+      const engineerAssignments = engineer_ids.map((engineer_id) => {
+        return db.query(
+          `INSERT INTO projects_assign_engineers (project_id, engineer_id)
+         VALUES ($1, $2)`,
+          [newProject.project_id, engineer_id]
+        );
+      });
+
+      // Research this
+      await Promise.all(engineerAssignments);
+
+      res.status(200).json(newProject);
+    } catch (error) {
+      console.error("Error adding project:", error);
+      res.status(500).send("Error adding project");
+    }
   }
-});
+);
 
-app.post("/addDailyLog", verifyToken, async (req, res) => {
-  const {
-    project_id,
-    log_date,
-    engineer_id,
-    status_submitted,
-    received_payment,
-    hours,
-    pdf_url,
-  } = req.body;
+app.post(
+  "/addDailyLog",
+  verifyToken,
+  checkPermissionLevel(1),
+  async (req, res) => {
+    const {
+      project_id,
+      log_date,
+      engineer_id,
+      status_submitted,
+      received_payment,
+      hours,
+      pdf_url,
+    } = req.body;
 
-  const date_submitted = status_submitted === "1" ? new Date() : null;
+    const date_submitted = status_submitted === "1" ? new Date() : null;
 
-  try {
-    const result = await db.query(
-      `INSERT INTO daily_logs (
+    try {
+      const result = await db.query(
+        `INSERT INTO daily_logs (
         project_id,
         log_date,
         engineer_id,
@@ -754,47 +700,52 @@ app.post("/addDailyLog", verifyToken, async (req, res) => {
         date_submitted
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *`,
-      [
-        project_id,
-        log_date,
-        engineer_id,
-        status_submitted,
-        received_payment,
-        hours,
-        pdf_url,
-        date_submitted,
-      ]
-    );
+        [
+          project_id,
+          log_date,
+          engineer_id,
+          status_submitted,
+          received_payment,
+          hours,
+          pdf_url,
+          date_submitted,
+        ]
+      );
 
-    res.status(200).json(result.rows[0]);
-  } catch (err) {
-    console.error("Error adding daily log:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+      res.status(200).json(result.rows[0]);
+    } catch (err) {
+      console.error("Error adding daily log:", err);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
   }
-});
+);
 
-app.post("/addExpense", verifyToken, async (req, res) => {
-  const {
-    project_id,
-    engineer_id,
-    daily_log_id,
-    expense_date,
-    expense_type,
-    expense_details,
-    amount,
-    is_billable,
-    status1,
-    status2,
-    status3,
-    pdf_url,
-  } = req.body;
+app.post(
+  "/addExpense",
+  verifyToken,
+  checkPermissionLevel(1),
+  async (req, res) => {
+    const {
+      project_id,
+      engineer_id,
+      daily_log_id,
+      expense_date,
+      expense_type,
+      expense_details,
+      amount,
+      is_billable,
+      status1,
+      status2,
+      status3,
+      pdf_url,
+    } = req.body;
 
-  console.log("Received data:", req.body); // Log the received data
-  const parsedDailyLogId = daily_log_id === "" ? null : daily_log_id;
+    console.log("Received data:", req.body); // Log the received data
+    const parsedDailyLogId = daily_log_id === "" ? null : daily_log_id;
 
-  try {
-    const result = await db.query(
-      `INSERT INTO expenses (
+    try {
+      const result = await db.query(
+        `INSERT INTO expenses (
         daily_log_id,
         engineer_id,
         project_id,
@@ -809,94 +760,132 @@ app.post("/addExpense", verifyToken, async (req, res) => {
         pdf_url
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *`,
-      [
-        parsedDailyLogId,
-        engineer_id,
-        project_id,
-        expense_date,
-        expense_type,
-        expense_details,
-        amount,
-        is_billable,
-        status1,
-        status2,
-        status3,
-        pdf_url,
-      ]
-    );
+        [
+          parsedDailyLogId,
+          engineer_id,
+          project_id,
+          expense_date,
+          expense_type,
+          expense_details,
+          amount,
+          is_billable,
+          status1,
+          status2,
+          status3,
+          pdf_url,
+        ]
+      );
 
-    res.status(200).json(result.rows[0]);
-  } catch (err) {
-    console.error("Error adding expense:", err);
-    res
-      .status(500)
-      .json({ error: "Internal Server Error", details: err.message });
+      res.status(200).json(result.rows[0]);
+    } catch (err) {
+      console.error("Error adding expense:", err);
+      res
+        .status(500)
+        .json({ error: "Internal Server Error", details: err.message });
+    }
   }
-});
+);
+
+app.post(
+  "/addEngineer",
+  verifyToken,
+  checkPermissionLevel(2),
+  async (req, res) => {
+    const { name, title } = req.body;
+
+    try {
+      const result = await db.query(
+        "INSERT INTO engineers (name, title) VALUES ($1, $2) RETURNING *",
+        [name, title]
+      );
+      res.status(200).json(result.rows[0]);
+    } catch (err) {
+      console.error("Error adding engineer:", err);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
+);
+
 // Delete
-app.post("/deleteMarkedExpenses", verifyToken, async (req, res) => {
-  const { expenseIds } = req.body;
+app.post(
+  "/deleteMarkedExpenses",
+  verifyToken,
+  checkPermissionLevel(2),
+  async (req, res) => {
+    const { expenseIds } = req.body;
 
-  try {
-    const result = await db.query(
-      // ANY(id::int[]) checks if id is in int[]
-      `DELETE FROM expenses WHERE expense_id = ANY($1::int[]) RETURNING *`,
-      [expenseIds]
-    );
+    try {
+      const result = await db.query(
+        // ANY(id::int[]) checks if id is in int[]
+        `DELETE FROM expenses WHERE expense_id = ANY($1::int[]) RETURNING *`,
+        [expenseIds]
+      );
 
-    res.json(result.rows);
-  } catch (error) {
-    console.error("Error deleting expenses:", error);
-    res.status(500).json({ message: "Server error" });
+      res.json(result.rows);
+    } catch (error) {
+      console.error("Error deleting expenses:", error);
+      res.status(500).json({ message: "Server error" });
+    }
   }
-});
+);
 
-app.post("/deleteMarkedDailyLogs", verifyToken, async (req, res) => {
-  const { dailyLogIds } = req.body;
+app.post(
+  "/deleteMarkedDailyLogs",
+  verifyToken,
+  checkPermissionLevel(2),
+  async (req, res) => {
+    const { dailyLogIds } = req.body;
 
-  try {
-    const result = await db.query(
-      `DELETE FROM daily_logs WHERE daily_log_id = ANY($1::int[]) RETURNING *`,
-      [dailyLogIds]
-    );
-    res.json(result.rows);
-  } catch (error) {
-    console.error("Error deleting daily logs:", error);
-    res.status(500).json({ message: "Server error" });
+    try {
+      const result = await db.query(
+        `DELETE FROM daily_logs WHERE daily_log_id = ANY($1::int[]) RETURNING *`,
+        [dailyLogIds]
+      );
+      res.json(result.rows);
+    } catch (error) {
+      console.error("Error deleting daily logs:", error);
+      res.status(500).json({ message: "Server error" });
+    }
   }
-});
+);
 
-app.post("/deleteMarkedProjects", verifyToken, async (req, res) => {
-  const { projectIds } = req.body;
+app.post(
+  "/deleteMarkedProjects",
+  verifyToken,
+  checkPermissionLevel(2),
+  async (req, res) => {
+    const { projectIds } = req.body;
 
-  try {
-    // Begin transaction
-    await db.query("BEGIN");
+    try {
+      // Begin transaction
+      await db.query("BEGIN");
 
-    // Delete related entries in projects_assign_engineers
-    await db.query(
-      `DELETE FROM projects_assign_engineers WHERE project_id = ANY($1::int[])`,
-      [projectIds]
-    );
+      // Delete related entries in projects_assign_engineers
+      await db.query(
+        `DELETE FROM projects_assign_engineers WHERE project_id = ANY($1::int[])`,
+        [projectIds]
+      );
 
-    // Delete projects
-    const result = await db.query(
-      `DELETE FROM projects WHERE project_id = ANY($1::int[]) RETURNING *`,
-      [projectIds]
-    );
+      // Delete projects
+      const result = await db.query(
+        `DELETE FROM projects WHERE project_id = ANY($1::int[]) RETURNING *`,
+        [projectIds]
+      );
 
-    // Commit transaction
-    await db.query("COMMIT");
+      // Commit transaction
+      await db.query("COMMIT");
 
-    res.json(result.rows);
-  } catch (error) {
-    // Rollback transaction on error
-    await db.query("ROLLBACK");
-    console.error("Error deleting projects:", error);
-    res.status(500).json({ message: "Server error" });
+      res.json(result.rows);
+    } catch (error) {
+      // Rollback transaction on error
+      await db.query("ROLLBACK");
+      console.error("Error deleting projects:", error);
+      res.status(500).json({ message: "Server error" });
+    }
   }
-});
+);
 
+// Notification functions
 // Function to check if a project has entries or expenses on a specific date
 const hasEntriesOrExpensesOnDate = async (projectId, date, checkExpenses) => {
   const table = checkExpenses ? "expenses" : "daily_logs";
@@ -950,7 +939,6 @@ app.get("/projectEntriesStatus", verifyToken, async (req, res) => {
   }
 });
 
-// Notifications
 app.get("/notifications", verifyToken, async (req, res) => {
   const { project_id } = req.query;
   // console.log("Getting noti backend");
@@ -968,13 +956,11 @@ app.get("/notifications", verifyToken, async (req, res) => {
   }
 });
 
-// Check if the date is a weekend
 const isWeekend = (date) => {
   const day = date.getDay();
   return day === 0 || day === 6; // Sunday (0) or Saturday (6)
 };
 
-// Timer function that runs every hour
 const checkAndUpdateNotifications = async () => {
   try {
     // Delete all notifications
@@ -1125,21 +1111,6 @@ app.get("/missingLogs", verifyToken, async (req, res) => {
     res.json({ missingDailyLogs: missingDays });
   } catch (error) {
     console.error("Error calculating missing daily logs:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-app.post("/addEngineer", verifyToken, async (req, res) => {
-  const { name, title } = req.body;
-
-  try {
-    const result = await db.query(
-      "INSERT INTO engineers (name, title) VALUES ($1, $2) RETURNING *",
-      [name, title]
-    );
-    res.status(200).json(result.rows[0]);
-  } catch (err) {
-    console.error("Error adding engineer:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

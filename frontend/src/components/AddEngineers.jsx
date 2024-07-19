@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useNavigate, useLocation } from "react-router-dom";
 
 function AddEngineers() {
   const ip = "http://localhost:3000";
@@ -12,13 +12,13 @@ function AddEngineers() {
   const nav = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = location.state || {};
-  const token = localStorage.getItem("token");
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
     if (!isAuthenticated || !token) {
       nav("/unauthorized");
     }
-  }, [isAuthenticated, token, nav]);
+  }, [isAuthenticated, nav]);
 
   const handleNewEngineerChange = (e) => {
     const { name, value } = e.target;
@@ -30,6 +30,7 @@ function AddEngineers() {
 
   const handleAddEngineer = async (e) => {
     e.preventDefault();
+    const token = localStorage.getItem("token");
     try {
       const response = await axios.post(`${ip}/addEngineer`, newEngineer, {
         headers: {
@@ -46,8 +47,12 @@ function AddEngineers() {
         setMessage("Failed to add engineer");
       }
     } catch (error) {
-      setMessage("Error adding engineer");
-      console.error("Error adding engineer:", error);
+      if (error.response && error.response.status === 403) {
+        alert("You do not have the required permission level");
+      } else {
+        setMessage("Error adding engineer");
+        console.error("Error adding engineer:", error);
+      }
     }
   };
 

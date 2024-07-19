@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 const DailyLogs = () => {
   let ip = "http://localhost:3000";
   const [dailyLogs, setDailyLogs] = useState([]);
   const [projectTitle, setProjectTitle] = useState("");
   const [editDailyLog, setEditDailyLog] = useState(null);
+  const [permissionLevel, setPermissionLevel] = useState(0); // Store the user's permission level
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId, action, isAuthenticated, highlightLogId } =
@@ -14,11 +16,16 @@ const DailyLogs = () => {
   const token = localStorage.getItem("token");
 
   useEffect(() => {
+    if (!isAuthenticated || !token) {
+      navigate("/unauthorized");
+      return;
+    }
+
+    // Decode token to get permission level
+    const decoded = jwtDecode(token);
+    setPermissionLevel(decoded.permission_level);
+
     async function fetchDailyLogs() {
-      if (!isAuthenticated || !token) {
-        navigate("/unauthorized");
-        return;
-      }
       try {
         const response = await axios.post(
           `${ip}/dailyLogs`,
@@ -63,16 +70,17 @@ const DailyLogs = () => {
 
     fetchDailyLogs();
     fetchProjectName();
-  }, [projectId, action, isAuthenticated, navigate]);
+  }, [projectId, action, isAuthenticated, navigate, token]);
 
-  function handleCancelEdit() {
+  const handleCancelEdit = () => {
     setEditDailyLog(null);
-  }
-  function handleBack() {
-    navigate(-1);
-  }
+  };
 
-  function handleAddDailyLog() {
+  const handleBack = () => {
+    navigate(-1);
+  };
+
+  const handleAddDailyLog = () => {
     navigate("/addDailyLog", {
       state: {
         projectId: projectId,
@@ -80,9 +88,9 @@ const DailyLogs = () => {
         isAuthenticated: true,
       },
     });
-  }
+  };
 
-  async function handleDeleteClick(logId) {
+  const handleDeleteClick = async (logId) => {
     const token = localStorage.getItem("token");
     const isConfirmed = window.confirm(
       "Are you sure you want to delete this daily log?"
@@ -123,26 +131,25 @@ const DailyLogs = () => {
         }
       }
     }
-  }
+  };
 
-  function handleEditClick(log) {
+  const handleEditClick = (log) => {
     setEditDailyLog({ ...log });
-    // Scroll to the edit project form
     setTimeout(() => {
       const element = document.getElementById("editLog");
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
       }
     }, 0);
-  }
+  };
 
-  function handleChange(event) {
+  const handleChange = (event) => {
     const { name, value } = event.target;
     setEditDailyLog({
       ...editDailyLog,
       [name]: value === "" ? null : value,
     });
-  }
+  };
 
   const handleSave = async () => {
     try {
@@ -179,9 +186,11 @@ const DailyLogs = () => {
         <button onClick={handleBack} className="btn btn-secondary back">
           Back
         </button>
-        <button onClick={handleAddDailyLog} className="btn btn-primary add">
-          Add Daily Log
-        </button>
+        {permissionLevel >= 1 && (
+          <button onClick={handleAddDailyLog} className="btn btn-primary add">
+            Add Daily Log
+          </button>
+        )}
       </div>
       <table className="table mt-3">
         <thead>
@@ -233,10 +242,16 @@ const DailyLogs = () => {
                   </a>
                 </td>
                 <td>
-                  <button onClick={() => handleEditClick(log)}>Edit</button>
-                  <button onClick={() => handleDeleteClick(log.daily_log_id)}>
-                    Delete
-                  </button>
+                  {permissionLevel >= 2 && (
+                    <>
+                      <button onClick={() => handleEditClick(log)}>Edit</button>
+                      <button
+                        onClick={() => handleDeleteClick(log.daily_log_id)}
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))

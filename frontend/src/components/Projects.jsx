@@ -1,22 +1,29 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 
 function Projects() {
-  let ip = "http://localhost:3000";
+  const ip = "http://localhost:3000";
   const [projects, setProjects] = useState([]);
   const [editProject, setEditProject] = useState(null);
   const [displayingMessage, setDisplayingMessage] = useState("Ongoing");
   const [entriesStatus, setEntriesStatus] = useState({});
   const [expensesStatus, setExpensesStatus] = useState({});
-  const [notificationsCount, setNotificationsCount] = useState({}); // Added state for notifications count
+  const [notificationsCount, setNotificationsCount] = useState({});
+  const [permissionLevel, setPermissionLevel] = useState(0); // Store the user's permission level
 
   const navigate = useNavigate();
   const location = useLocation();
 
+  const token = localStorage.getItem("token");
+
   useEffect(() => {
-    const token = localStorage.getItem("token");
     if (location.state?.isAuthenticated && token) {
+      // Decode token to get permission level
+      const decoded = jwtDecode(token);
+      setPermissionLevel(decoded.permission_level);
+
       axios
         .post(
           `${ip}/updateProjectDisplay`,
@@ -75,7 +82,6 @@ function Projects() {
         )
         .catch((err) => {
           console.error("Error fetching project data:", err);
-          // Handle token expiration or invalid token
           if (err.response && err.response.status === 401) {
             navigate("/login");
           }
@@ -86,12 +92,9 @@ function Projects() {
   }, [location.state?.isAuthenticated, navigate]);
 
   const fetchNotificationsCount = async (projectId) => {
-    const token = localStorage.getItem("token");
-
     try {
       const response = await axios.get(`${ip}/notifications`, {
         params: { project_id: projectId },
-        // Same {}
         headers: {
           "access-token": token,
         },
@@ -113,7 +116,6 @@ function Projects() {
 
   const handleEditClick = (project) => {
     setEditProject({ ...project });
-    // Scroll to the edit project form
     setTimeout(() => {
       const element = document.getElementById("editProject");
       if (element) {
@@ -135,7 +137,6 @@ function Projects() {
   };
 
   const handleSave = async () => {
-    const token = localStorage.getItem("token");
     try {
       const response = await axios.post(
         `${ip}/editProject`,
@@ -175,8 +176,6 @@ function Projects() {
     event.preventDefault();
     const ongoing = document.getElementById("ongoingCheckbox").checked;
     const completed = document.getElementById("completedCheckbox").checked;
-
-    const token = localStorage.getItem("token");
     try {
       const response = await axios.post(
         `${ip}/updateProjectDisplay`,
@@ -293,7 +292,6 @@ function Projects() {
     const isConfirmed = window.confirm(
       "Are you sure you want to delete this project?"
     );
-    const token = localStorage.getItem("token");
     if (isConfirmed) {
       try {
         await axios.post(
@@ -329,7 +327,6 @@ function Projects() {
   };
 
   useEffect(() => {
-    // Fetch notifications count for each project after projects have been loaded
     projects.forEach((project) => {
       fetchNotificationsCount(project.project_id);
     });
@@ -359,15 +356,22 @@ function Projects() {
           <div>Currently Displaying: {displayingMessage}</div>
         </form>
         <div>
-          <button
-            onClick={navigateToAddEngineers}
-            className="btn btn-primary add"
-          >
-            Add Engineers
-          </button>
-          <button onClick={handleAddProject} className="btn btn-primary add">
-            Add Project
-          </button>
+          {permissionLevel >= 2 && (
+            <>
+              <button
+                onClick={navigateToAddEngineers}
+                className="btn btn-primary add"
+              >
+                Add Engineers
+              </button>
+              <button
+                onClick={handleAddProject}
+                className="btn btn-primary add"
+              >
+                Add Project
+              </button>
+            </>
+          )}
         </div>
       </div>
       <table className="table mt-3">
@@ -484,15 +488,21 @@ function Projects() {
                 </button>
               </td>
               <td>
-                <button onClick={() => handleEditClick(project)}>
-                  Edit Project
-                </button>
-                <button onClick={() => navigateToEditEngineers(project)}>
-                  Edit Engineers
-                </button>
-                <button onClick={() => handleDeleteClick(project.project_id)}>
-                  Delete Projects
-                </button>
+                {permissionLevel >= 2 && (
+                  <>
+                    <button onClick={() => handleEditClick(project)}>
+                      Edit Project
+                    </button>
+                    <button onClick={() => navigateToEditEngineers(project)}>
+                      Edit Engineers
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(project.project_id)}
+                    >
+                      Delete Project
+                    </button>
+                  </>
+                )}
               </td>
             </tr>
           ))}

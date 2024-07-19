@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 
 const Notifications = () => {
   const ip = "http://localhost:3000";
   const [notifications, setNotifications] = useState([]);
+  const [permissionLevel, setPermissionLevel] = useState(0);
   const location = useLocation();
   const nav = useNavigate();
   const { isAuthenticated, project } = location.state || {};
@@ -15,6 +17,9 @@ const Notifications = () => {
       nav("/unauthorized");
       return;
     }
+
+    const decoded = jwtDecode(token);
+    setPermissionLevel(decoded.permission_level);
 
     const fetchNotifications = async () => {
       try {
@@ -36,13 +41,17 @@ const Notifications = () => {
   };
 
   const navAddDailyLog = () => {
-    nav("/addDailyLog", {
-      state: {
-        projectId: project.project_id,
-        projectTitle: project.project_name,
-        isAuthenticated: true,
-      },
-    });
+    if (permissionLevel >= 1) {
+      nav("/addDailyLog", {
+        state: {
+          projectId: project.project_id,
+          projectTitle: project.project_name,
+          isAuthenticated: true,
+        },
+      });
+    } else {
+      alert("You do not have permission to add daily logs.");
+    }
   };
 
   const refreshNotifications = async () => {
@@ -72,9 +81,11 @@ const Notifications = () => {
           Back
         </button>
         <div>
-          <button className="btn btn-primary back" onClick={navAddDailyLog}>
-            Add Daily Log
-          </button>
+          {permissionLevel >= 1 && (
+            <button className="btn btn-primary back" onClick={navAddDailyLog}>
+              Add Daily Log
+            </button>
+          )}
           <button
             className="btn btn-primary back"
             onClick={refreshNotifications}
