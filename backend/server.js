@@ -7,10 +7,6 @@ import moment from "moment-timezone";
 import cors from "cors";
 import jwt from "jsonwebtoken";
 
-// Get the current date and time in Texas Central Time
-// TODO change all the times to texasTime
-const texasTime = moment().tz("America/Chicago").format();
-
 const port = 3000;
 const saltRounds = 10;
 
@@ -848,7 +844,6 @@ app.post(
     }
   }
 );
-
 app.post(
   "/deleteMarkedProjects",
   verifyToken,
@@ -863,6 +858,12 @@ app.post(
       // Delete related entries in projects_assign_engineers
       await db.query(
         `DELETE FROM projects_assign_engineers WHERE project_id = ANY($1::int[])`,
+        [projectIds]
+      );
+
+      // Delete related entries in notifications
+      await db.query(
+        `DELETE FROM notifications WHERE project_id = ANY($1::int[])`,
         [projectIds]
       );
 

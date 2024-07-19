@@ -11,17 +11,19 @@ function GlobalClock() {
     return () => clearInterval(intervalId);
   }, []);
 
-  const formatTime = (date) => {
+  const formatTimeAsUTC = (date) => {
     return new Intl.DateTimeFormat("en-US", {
       hour: "numeric",
       minute: "numeric",
       hour12: true,
-      timeZone: "America/Chicago", // Central time for Texas
+      timeZone: "UTC",
     }).format(date);
   };
 
   return (
-    <div style={{ color: "white" }}>US Central: {formatTime(currentTime)}</div>
+    <div style={{ color: "white" }}>
+      <div>UTC Time: {formatTimeAsUTC(currentTime)}</div>
+    </div>
   );
 }
 
