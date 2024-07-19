@@ -3,22 +3,22 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 function AddEngineers() {
-  let ip = "http://localhost:3000";
+  const ip = "http://localhost:3000";
   const [message, setMessage] = useState("");
   const [newEngineer, setNewEngineer] = useState({
     name: "",
     title: "",
   });
-
   const nav = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = location.state || {};
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !token) {
       nav("/unauthorized");
     }
-  }, [location.state, nav]);
+  }, [isAuthenticated, token, nav]);
 
   const handleNewEngineerChange = (e) => {
     const { name, value } = e.target;
@@ -31,8 +31,10 @@ function AddEngineers() {
   const handleAddEngineer = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(`${ip}/addEngineer`, {
-        ...newEngineer,
+      const response = await axios.post(`${ip}/addEngineer`, newEngineer, {
+        headers: {
+          "access-token": token,
+        },
       });
       if (response.status === 200) {
         setNewEngineer({

@@ -3,20 +3,24 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const Notifications = () => {
-  let ip = "http://localhost:3000";
+  const ip = "http://localhost:3000";
   const [notifications, setNotifications] = useState([]);
   const location = useLocation();
   const nav = useNavigate();
   const { isAuthenticated, project } = location.state || {};
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !token) {
       nav("/unauthorized");
+      return;
     }
+
     const fetchNotifications = async () => {
       try {
         const response = await axios.get(`${ip}/notifications`, {
           params: { project_id: project.project_id },
+          headers: { "access-token": token },
         });
         setNotifications(response.data);
       } catch (error) {
@@ -25,13 +29,13 @@ const Notifications = () => {
     };
 
     fetchNotifications();
-  }, [isAuthenticated, nav, project]);
+  }, [isAuthenticated, nav, project, token]);
 
-  function handleBack() {
+  const handleBack = () => {
     nav(-1);
-  }
+  };
 
-  function navAddDailyLog() {
+  const navAddDailyLog = () => {
     nav("/addDailyLog", {
       state: {
         projectId: project.project_id,
@@ -39,19 +43,26 @@ const Notifications = () => {
         isAuthenticated: true,
       },
     });
-  }
+  };
 
-  async function updateNotifications() {
+  const refreshNotifications = async () => {
     try {
-      await axios.post(`${ip}/updateNotifications`);
+      await axios.post(
+        `${ip}/updateNotifications`,
+        {},
+        {
+          headers: { "access-token": token },
+        }
+      );
       const response = await axios.get(`${ip}/notifications`, {
         params: { project_id: project.project_id },
+        headers: { "access-token": token },
       });
       setNotifications(response.data);
     } catch (error) {
       console.error("Error updating notifications:", error);
     }
-  }
+  };
 
   return (
     <div className="container mt-5">
@@ -66,9 +77,9 @@ const Notifications = () => {
           </button>
           <button
             className="btn btn-primary back"
-            onClick={updateNotifications}
+            onClick={refreshNotifications}
           >
-            Update Notifications
+            Refresh Notifications
           </button>
         </div>
       </div>

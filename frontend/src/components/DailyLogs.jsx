@@ -11,18 +11,25 @@ const DailyLogs = () => {
   const location = useLocation();
   const { projectId, action, isAuthenticated, highlightLogId } =
     location.state || {};
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
     async function fetchDailyLogs() {
-      if (!isAuthenticated) {
+      if (!isAuthenticated || !token) {
         navigate("/unauthorized");
         return;
       }
       try {
-        const response = await axios.post(`${ip}/dailyLogs`, {
-          project_id: projectId,
-          action: action,
-        });
+        const response = await axios.post(
+          `${ip}/dailyLogs`,
+          {
+            project_id: projectId,
+            action: action,
+          },
+          {
+            headers: { "access-token": token },
+          }
+        );
         if (response.status === 200) {
           setDailyLogs(response.data);
         } else {
@@ -35,9 +42,15 @@ const DailyLogs = () => {
 
     async function fetchProjectName() {
       try {
-        const response = await axios.post(`${ip}/title`, {
-          project_id: projectId,
-        });
+        const response = await axios.post(
+          `${ip}/title`,
+          {
+            project_id: projectId,
+          },
+          {
+            headers: { "access-token": token },
+          }
+        );
         if (response.status === 200) {
           setProjectTitle(response.data.project_name);
         } else {
@@ -70,18 +83,31 @@ const DailyLogs = () => {
   }
 
   async function handleDeleteClick(logId) {
+    const token = localStorage.getItem("token");
     const isConfirmed = window.confirm(
       "Are you sure you want to delete this daily log?"
     );
     if (isConfirmed) {
       try {
-        await axios.post(`${ip}/deleteMarkedDailyLogs`, {
-          dailyLogIds: [logId],
-        });
-        const response = await axios.post(`${ip}/dailyLogs`, {
-          project_id: projectId,
-          action: action,
-        });
+        await axios.post(
+          `${ip}/deleteMarkedDailyLogs`,
+          {
+            dailyLogIds: [logId],
+          },
+          {
+            headers: { "access-token": token },
+          }
+        );
+        const response = await axios.post(
+          `${ip}/dailyLogs`,
+          {
+            project_id: projectId,
+            action: action,
+          },
+          {
+            headers: { "access-token": token },
+          }
+        );
 
         if (response.status === 200) {
           setDailyLogs(response.data);
@@ -120,9 +146,15 @@ const DailyLogs = () => {
 
   const handleSave = async () => {
     try {
-      const response = await axios.post(`${ip}/editDailyLog`, {
-        ...editDailyLog,
-      });
+      const response = await axios.post(
+        `${ip}/editDailyLog`,
+        {
+          ...editDailyLog,
+        },
+        {
+          headers: { "access-token": token },
+        }
+      );
 
       if (response.status === 200) {
         setDailyLogs(

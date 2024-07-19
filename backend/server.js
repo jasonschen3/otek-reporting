@@ -2,39 +2,40 @@ import express from "express";
 import bodyParser from "body-parser";
 import pg from "pg";
 import bcrypt from "bcrypt";
-import passport from "passport";
-import LocalStrategy from "passport-local";
-import session from "express-session";
+// import passport from "passport";
+// import LocalStrategy from "passport-local";
+// import session from "express-session";
 import env from "dotenv";
 import moment from "moment-timezone";
+import cors from "cors";
+import jwt from "jsonwebtoken";
 
 // Get the current date and time in Texas Central Time
-const texasTime = moment().tz("America/Chicago").format();
 // TODO change all the times to texasTime
-
-import cors from "cors";
+const texasTime = moment().tz("America/Chicago").format();
 
 const port = 3000;
 const saltRounds = 10;
 
 env.config();
-
 const app = express();
+
 app.use(cors());
 app.use(express.static("public"));
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(
-  session({
-    secret: process.env.SESSION_KEY,
-    resave: false,
-    saveUninitialized: true,
-  })
-);
+// app.use(
+//   session({
+//     secret: process.env.SESSION_KEY,
+//     resave: false,
+//     saveUninitialized: true,
+//     cookie: { secure: false }, // Ensure secure is false for development (http)
+//   })
+// );
 
-app.use(passport.initialize());
-app.use(passport.session());
+// app.use(passport.initialize());
+// app.use(passport.session());
 
 const db = new pg.Client({
   user: process.env.PG_USER,
@@ -47,6 +48,156 @@ db.connect();
 
 let projectsInfo = []; // arr of json
 let projectDisplayStatus = 1; // 0 1 2 3, display none, display ongoing, display completed, display all
+
+const secretKey = process.env.SESSION_KEY;
+
+function generateToken(user) {
+  const payload = {
+    id: user.id,
+    username: user.username,
+    permission_level: user.permission_level, // Add user permissions here
+  };
+  const options = { expiresIn: "1h" }; // Set token expiration time
+  console.log("generated");
+  return jwt.sign(payload, secretKey, options);
+}
+
+function verifyToken(req, res, next) {
+  const token = req.headers["access-token"];
+  if (!token) {
+    console.log("no token provided");
+    return res.status(403).send("No token provided");
+  }
+
+  jwt.verify(token, secretKey, (err, decoded) => {
+    if (err) {
+      return res.status(500).send("Failed to authenticate token");
+    }
+    console.log("Verified");
+    req.user = decoded; // Save the decoded token to request object
+    next();
+  });
+}
+
+function checkPermissionLevel(requiredLevel) {
+  console.log("Checking permission levels");
+  return (req, res, next) => {
+    const userPermissionLevel = req.user.permission_level;
+    if (userPermissionLevel >= requiredLevel) {
+      next();
+    } else {
+      console.log("Level isn't sufficient");
+      res.status(403).send("You do not have the required permission level");
+    }
+  };
+}
+
+// Function to compare the password
+async function comparePassword(plainPassword, hashedPassword) {
+  const isMatch = await bcrypt.compare(plainPassword, hashedPassword);
+  return isMatch;
+}
+
+app.post("/login", async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const result = await db.query("SELECT * FROM users WHERE username = $1", [
+      username,
+    ]);
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      const storedHashedPassword = user.password;
+
+      const valid = await comparePassword(password, storedHashedPassword);
+      if (valid) {
+        const token = generateToken(user);
+        console.log("Valid ", token);
+        return res.status(200).json({ token });
+      } else {
+        return res.status(401).send("Invalid credentials");
+      }
+    } else {
+      return res.status(401).send("Invalid credentials");
+    }
+  } catch (err) {
+    console.error("Error during login:", err);
+    return res.status(500).send("Internal server error");
+  }
+});
+
+// // Passport strategy
+// passport.use(
+//   new LocalStrategy(
+//     { usernameField: "username", passwordField: "password" },
+//     async (username, password, cb) => {
+//       try {
+//         const result = await db.query(
+//           "SELECT * FROM users WHERE username = $1",
+//           [username]
+//         );
+//         if (result.rows.length > 0) {
+//           const user = result.rows[0];
+//           console.log("user in strat ", user);
+//           const storedHashedPassword = user.password;
+//           bcrypt.compare(password, storedHashedPassword, (err, valid) => {
+//             if (err) {
+//               console.error("Error comparing passwords:", err);
+//               return cb(err);
+//             }
+//             if (valid) {
+//               console.log("Valid password ");
+//               return cb(null, user);
+//             } else {
+//               return cb(null, false, { message: "Incorrect password" });
+//             }
+//           });
+//         } else {
+//           return cb(null, false, { message: "User not found" });
+//         }
+//       } catch (err) {
+//         console.log(err);
+//         return cb(err);
+//       }
+//     }
+//   )
+// );
+
+// // Determines which data should be stored in session
+// passport.serializeUser((user, cb) => {
+//   console.log("Serialized ", user);
+//   cb(null, user.id);
+// });
+
+// passport.deserializeUser(async (id, cb) => {
+//   console.log("Deserialize ", id);
+//   try {
+//     const result = await db.query("SELECT * FROM users WHERE id = $1", [id]);
+//     const user = result.rows[0];
+//     console.log("DESERIALIZE ", user);
+//     cb(null, user);
+//   } catch (err) {
+//     cb(err);
+//   }
+// });
+//
+// // Middleware to log session and user information
+// app.use((req, res, next) => {
+//   console.log("Session:", req.session);
+//   console.log("User:", req.user); // GIVING undefined
+//   next();
+// });
+
+// const checkAuthentication = (req, res, next) => {
+//   console.log("CHECK ", req.isAuthenticated());
+//   if (req.isAuthenticated()) {
+//     console.log("Is authenticated");
+//     return next();
+//   } else {
+//     console.log("unauthorized");
+//     res.status(401).json({ error: "Unauthorized" });
+//   }
+// };
 
 async function updateCompanyInfo() {
   let currProjectsInfo = null;
@@ -118,20 +269,12 @@ const getFormattedDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-app.get("/logout", (req, res) => {
-  req.logout(function (err) {
-    if (err) {
-      return next(err);
-    }
-    res.redirect("/");
-  });
-});
-
 app.get("/", async (req, res) => {
   res.send("Root of server");
 });
 
-app.get("/projects", async (req, res) => {
+app.get("/projects", verifyToken, async (req, res) => {
+  console.log("Attempting to get projects");
   try {
     await updateCompanyInfo();
     res.json(projectsInfo);
@@ -141,7 +284,8 @@ app.get("/projects", async (req, res) => {
   }
 });
 
-app.post("/dailyLogs", async (req, res) => {
+app.post("/dailyLogs", verifyToken, async (req, res) => {
+  console.log("Post daily log");
   const projectId = req.body.project_id;
   const action = req.body.action;
   const today = new Date();
@@ -204,7 +348,7 @@ app.post("/dailyLogs", async (req, res) => {
   }
 });
 
-app.post("/expenses", async (req, res) => {
+app.post("/expenses", verifyToken, async (req, res) => {
   const projectId = req.body.project_id;
   const action = req.body.action;
   const today = new Date();
@@ -262,7 +406,7 @@ app.post("/expenses", async (req, res) => {
   res.json(expensesInfo);
 });
 
-app.post("/editProjectDisplay", async (req, res) => {
+app.post("/editProjectDisplay", verifyToken, async (req, res) => {
   // console.log("Update posted");
   const { ongoing, completed } = req.body;
 
@@ -283,8 +427,8 @@ app.post("/editProjectDisplay", async (req, res) => {
 });
 
 // Toggle what to display based on status
-app.post("/updateProjectDisplay", async (req, res) => {
-  console.log("Update posted");
+app.post("/updateProjectDisplay", verifyToken, async (req, res) => {
+  // console.log("Update posted");
   const ongoing = req.body.ongoing;
   const completed = req.body.completed;
   if (ongoing && completed) {
@@ -303,12 +447,14 @@ app.post("/updateProjectDisplay", async (req, res) => {
 // app.post("/register", async (req, res) => {
 //   const username = req.body.username;
 //   const password = req.body.password;
+//   const permission_level = req.body.permission_level;
 
 //   try {
 //     // Check if the username already exists
-//     const checkResult = await db.query("SELECT * FROM users WHERE username = $1", [
-//       username,
-//     ]);
+//     const checkResult = await db.query(
+//       "SELECT * FROM users WHERE username = $1",
+//       [username]
+//     );
 //     console.log(checkResult.rows);
 //     if (checkResult.rows.length > 0) {
 //       return res.status(409).json({ message: "Username already exists" }); // 409 Conflict
@@ -319,8 +465,8 @@ app.post("/updateProjectDisplay", async (req, res) => {
 //           return res.status(500).json({ message: "Error hashing password" });
 //         } else {
 //           const result = await db.query(
-//             "INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *",
-//             [username, hash]
+//             "INSERT INTO users (username, password, permission_level) VALUES ($1, $2, $3) RETURNING *",
+//             [username, hash, permission_level]
 //           );
 //           const user = result.rows[0];
 //           // console.log(result.rows);
@@ -341,64 +487,8 @@ app.post("/updateProjectDisplay", async (req, res) => {
 //   }
 // });
 
-// Login route
-app.post("/login", passport.authenticate("local"), (req, res) => {
-  projectDisplayStatus = 1;
-  res.status(200).json({ message: "Login successful" });
-});
-
-// Passport strategy
-passport.use(
-  new LocalStrategy(
-    { usernameField: "username", passwordField: "password" },
-    async (username, password, done) => {
-      try {
-        const result = await db.query(
-          "SELECT * FROM users WHERE username = $1",
-          [username]
-        );
-        console.log("STRATEGY ", result);
-        if (result.rows.length > 0) {
-          const user = result.rows[0];
-          const storedHashedPassword = user.password;
-          bcrypt.compare(password, storedHashedPassword, (err, valid) => {
-            if (err) {
-              console.error("Error comparing passwords:", err);
-              return done(err);
-            }
-            if (valid) {
-              return done(null, user);
-            } else {
-              return done(null, false, { message: "Incorrect password" });
-            }
-          });
-        } else {
-          return done(null, false, { message: "User not found" });
-        }
-      } catch (err) {
-        console.log(err);
-        return done(err);
-      }
-    }
-  )
-);
-
-passport.serializeUser((user, cb) => {
-  cb(null, user.id);
-});
-
-passport.deserializeUser(async (id, cb) => {
-  try {
-    const result = await db.query("SELECT * FROM users WHERE id = $1", [id]);
-    const user = result.rows[0];
-    cb(null, user);
-  } catch (err) {
-    cb(err);
-  }
-});
-
 // Edit functionality
-app.post("/editProject", async (req, res) => {
+app.post("/editProject", verifyToken, async (req, res) => {
   const {
     project_id,
     project_name,
@@ -430,7 +520,7 @@ app.post("/editProject", async (req, res) => {
   }
 });
 
-app.get("/projects_assign_engineers", async (req, res) => {
+app.get("/projects_assign_engineers", verifyToken, async (req, res) => {
   const { project_id } = req.query;
 
   try {
@@ -445,7 +535,7 @@ app.get("/projects_assign_engineers", async (req, res) => {
   }
 });
 
-app.post("/updateProjectEngineers", async (req, res) => {
+app.post("/updateProjectEngineers", verifyToken, async (req, res) => {
   const { project_id, engineer_ids } = req.body;
 
   // console.log("pae backend", req.body);
@@ -471,7 +561,7 @@ app.post("/updateProjectEngineers", async (req, res) => {
   }
 });
 
-app.post("/editExpense", async (req, res) => {
+app.post("/editExpense", verifyToken, async (req, res) => {
   const {
     expense_id,
     expense_date,
@@ -508,7 +598,7 @@ app.post("/editExpense", async (req, res) => {
   }
 });
 
-app.post("/editDailyLog", async (req, res) => {
+app.post("/editDailyLog", verifyToken, async (req, res) => {
   const {
     log_date,
     status_submitted,
@@ -522,7 +612,6 @@ app.post("/editDailyLog", async (req, res) => {
   if (status_submitted === "1") {
     date_submitted = new Date().toISOString().split("T")[0]; // Current date in YYYY-MM-DD format
   }
-  console.log("date submitted: ", date_submitted);
   try {
     const result = await db.query(
       `UPDATE daily_logs 
@@ -547,7 +636,7 @@ app.post("/editDailyLog", async (req, res) => {
 });
 
 // Title functionality
-app.post("/title", async (req, res) => {
+app.post("/title", verifyToken, async (req, res) => {
   const { project_id } = req.body;
   try {
     const result = await db.query(
@@ -566,7 +655,7 @@ app.post("/title", async (req, res) => {
 });
 
 /////////////////////// Add functionality
-app.get("/engineers", async (req, res) => {
+app.get("/engineers", verifyToken, async (req, res) => {
   try {
     const result = await db.query("SELECT * FROM engineers");
     res.json(result.rows);
@@ -576,9 +665,9 @@ app.get("/engineers", async (req, res) => {
   }
 });
 
-app.get("/dailyLogs", async (req, res) => {
+app.get("/dailyLogs", verifyToken, async (req, res) => {
   const { projectId, date } = req.query;
-  // console.log(projectId, " Project id");
+  console.log(projectId, " Project id (daily log)");
   // console.log(date, " date");
   try {
     const result = await db.query(
@@ -594,7 +683,7 @@ app.get("/dailyLogs", async (req, res) => {
   }
 });
 
-app.post("/addProject", async (req, res) => {
+app.post("/addProject", verifyToken, async (req, res) => {
   let {
     project_name,
     project_status,
@@ -639,7 +728,7 @@ app.post("/addProject", async (req, res) => {
   }
 });
 
-app.post("/addDailyLog", async (req, res) => {
+app.post("/addDailyLog", verifyToken, async (req, res) => {
   const {
     project_id,
     log_date,
@@ -684,7 +773,7 @@ app.post("/addDailyLog", async (req, res) => {
   }
 });
 
-app.post("/addExpense", async (req, res) => {
+app.post("/addExpense", verifyToken, async (req, res) => {
   const {
     project_id,
     engineer_id,
@@ -745,7 +834,7 @@ app.post("/addExpense", async (req, res) => {
   }
 });
 // Delete
-app.post("/deleteMarkedExpenses", async (req, res) => {
+app.post("/deleteMarkedExpenses", verifyToken, async (req, res) => {
   const { expenseIds } = req.body;
 
   try {
@@ -762,7 +851,7 @@ app.post("/deleteMarkedExpenses", async (req, res) => {
   }
 });
 
-app.post("/deleteMarkedDailyLogs", async (req, res) => {
+app.post("/deleteMarkedDailyLogs", verifyToken, async (req, res) => {
   const { dailyLogIds } = req.body;
 
   try {
@@ -777,7 +866,7 @@ app.post("/deleteMarkedDailyLogs", async (req, res) => {
   }
 });
 
-app.post("/deleteMarkedProjects", async (req, res) => {
+app.post("/deleteMarkedProjects", verifyToken, async (req, res) => {
   const { projectIds } = req.body;
 
   try {
@@ -824,7 +913,7 @@ const hasEntriesOrExpensesOnDate = async (projectId, date, checkExpenses) => {
   return result.rows[0].exists;
 };
 
-app.get("/projectEntriesStatus", async (req, res) => {
+app.get("/projectEntriesStatus", verifyToken, async (req, res) => {
   const { checkExpenses } = req.query;
   const today = new Date();
   const yesterday = new Date(today);
@@ -862,15 +951,16 @@ app.get("/projectEntriesStatus", async (req, res) => {
 });
 
 // Notifications
-app.get("/notifications", async (req, res) => {
+app.get("/notifications", verifyToken, async (req, res) => {
   const { project_id } = req.query;
+  // console.log("Getting noti backend");
   try {
     const result = await db.query(
       `SELECT noti_id, noti_type, TO_CHAR(noti_related_date, 'MM-DD-YYYY') as formatted_date, noti_message
        FROM notifications WHERE project_id = $1`,
       [project_id]
     );
-
+    // console.log(result.rows);
     res.json(result.rows);
   } catch (error) {
     console.error("Error fetching notifications:", error);
@@ -951,13 +1041,13 @@ const checkAndUpdateNotifications = async () => {
       // Check for daily logs where payment has not been received after 30 days
       const now = new Date();
       for (const log of logsResult.rows) {
-        console.log(log);
-        // BUG status_submitted and received_payment are bits
+        //FIXED BUG: BITS must be in quotes
         if (log.status_submitted === "1" && log.received_payment === "0") {
-          console.log("Missing  ");
-          const logDate = new Date(log.log_date);
-          const diffDays = Math.floor((now - logDate) / (1000 * 60 * 60 * 24));
-          console.log(diffDays, " diff days");
+          const submittedDate = new Date(log.date_submitted);
+          const diffDays = Math.floor(
+            (now - submittedDate) / (1000 * 60 * 60 * 24)
+          );
+          // console.log(diffDays, " diff days");
           if (diffDays > 30) {
             await db.query(
               "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
@@ -973,7 +1063,7 @@ const checkAndUpdateNotifications = async () => {
       }
     }
 
-    console.log("Notifications updated.");
+    // console.log("Notifications refreshed.");
   } catch (error) {
     console.error("Error checking and updating notifications:", error);
   }
@@ -988,7 +1078,7 @@ setInterval(checkAndUpdateNotifications, 60 * 60 * 1000);
 // Initial call to start immediately
 checkAndUpdateNotifications();
 
-app.post("/updateNotifications", async (req, res) => {
+app.post("/updateNotifications", verifyToken, async (req, res) => {
   try {
     await checkAndUpdateNotifications();
     console.log("Updated Notifications");
@@ -1001,7 +1091,7 @@ app.post("/updateNotifications", async (req, res) => {
   }
 });
 
-app.get("/missingLogs", async (req, res) => {
+app.get("/missingLogs", verifyToken, async (req, res) => {
   const { project_id } = req.query;
   try {
     // Fetch the start and end date of the project
@@ -1039,7 +1129,7 @@ app.get("/missingLogs", async (req, res) => {
   }
 });
 
-app.post("/addEngineer", async (req, res) => {
+app.post("/addEngineer", verifyToken, async (req, res) => {
   const { name, title } = req.body;
 
   try {

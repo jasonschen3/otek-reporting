@@ -3,63 +3,74 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 function EditEngineers() {
-  let ip = "http://localhost:3000";
+  const ip = "http://localhost:3000";
   const [engineers, setEngineers] = useState([]);
   const [assignedEngineers, setAssignedEngineers] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
   const { project, isAuthenticated } = location.state || {};
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !token) {
       navigate("/unauthorized");
       return;
     }
-    axios
-      .get(`${ip}/engineers`)
-      .then((res) => {
-        setEngineers(res.data);
-      })
-      .catch((error) => {
-        console.error("There was an error fetching the engineers data!", error);
-      });
 
-    axios
-      .get(`${ip}/projects_assign_engineers`, {
-        // params to pass
-        params: { project_id: project.project_id },
-      })
-      .then((res) => {
+    const fetchEngineers = async () => {
+      try {
+        const response = await axios.get(`${ip}/engineers`, {
+          headers: { "access-token": token },
+        });
+        setEngineers(response.data);
+      } catch (error) {
+        console.error("Error fetching engineers data!", error);
+      }
+    };
+
+    const fetchAssignedEngineers = async () => {
+      try {
+        const response = await axios.get(`${ip}/projects_assign_engineers`, {
+          params: { project_id: project.project_id },
+          headers: { "access-token": token },
+        });
         setAssignedEngineers(
-          res.data.map((engineer) => engineer.engineer_id.toString())
+          response.data.map((engineer) => engineer.engineer_id.toString())
         );
-      })
-      .catch((error) => {
-        console.error(
-          "There was an error fetching the assigned engineers data!",
-          error
-        );
-      });
-  }, [project.project_id, navigate, isAuthenticated]);
+      } catch (error) {
+        console.error("Error fetching assigned engineers data!", error);
+      }
+    };
 
-  function handleCancelEdit() {
+    fetchEngineers();
+    fetchAssignedEngineers();
+  }, [project.project_id, navigate, isAuthenticated, token]);
+
+  const handleCancelEdit = () => {
     navigate(-1);
-  }
+  };
+
   const handleEngineerChange = (e) => {
     const { value, checked } = e.target;
     if (checked) {
-      setAssignedEngineers([...assignedEngineers, value]);
+      setAssignedEngineers((prev) => [...prev, value]);
     } else {
-      setAssignedEngineers(assignedEngineers.filter((id) => id !== value));
+      setAssignedEngineers((prev) => prev.filter((id) => id !== value));
     }
   };
 
   const handleSave = async () => {
     try {
-      await axios.post(`${ip}/updateProjectEngineers`, {
-        project_id: project.project_id,
-        engineer_ids: assignedEngineers,
-      });
+      await axios.post(
+        `${ip}/updateProjectEngineers`,
+        {
+          project_id: project.project_id,
+          engineer_ids: assignedEngineers,
+        },
+        {
+          headers: { "access-token": token },
+        }
+      );
       navigate("/projects", { state: { isAuthenticated: true } });
     } catch (error) {
       console.error("Error updating engineers:", error);

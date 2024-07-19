@@ -11,16 +11,24 @@ const Expenses = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+
     async function fetchExpenses() {
       try {
         if (!isAuthenticated) {
           navigate("/unauthorized");
           return;
         }
-        const response = await axios.post(`${ip}/expenses`, {
-          project_id: project.project_id,
-          action: action,
-        });
+        const response = await axios.post(
+          `${ip}/expenses`,
+          {
+            project_id: project.project_id,
+            action: action,
+          },
+          {
+            headers: { "access-token": token },
+          }
+        );
         if (response.status === 200) {
           console.log("Expenses data:", response.data);
           setExpenses(response.data);
@@ -64,18 +72,32 @@ const Expenses = () => {
   }
 
   async function handleDeleteClick(expenseId) {
+    const token = localStorage.getItem("token");
+
     const isConfirmed = window.confirm(
       "Are you sure you want to delete this expense?"
     );
     if (isConfirmed) {
       try {
-        await axios.post(`${ip}/deleteMarkedExpenses`, {
-          expenseIds: [expenseId],
-        });
-        const response = await axios.post(`${ip}/expenses`, {
-          project_id: project.project_id,
-          action: action,
-        });
+        await axios.post(
+          `${ip}/deleteMarkedExpenses`,
+          {
+            expenseIds: [expenseId],
+          },
+          {
+            headers: { "access-token": token },
+          }
+        );
+        const response = await axios.post(
+          `${ip}/expenses`,
+          {
+            project_id: project.project_id,
+            action: action,
+          },
+          {
+            headers: { "access-token": token },
+          }
+        );
 
         if (response.status === 200) {
           setExpenses(response.data);
@@ -113,10 +135,18 @@ const Expenses = () => {
   };
 
   const handleSave = async () => {
+    const token = localStorage.getItem("token");
+
     try {
-      const response = await axios.post(`${ip}/editExpense`, {
-        ...editExpense,
-      });
+      const response = await axios.post(
+        `${ip}/editExpense`,
+        {
+          ...editExpense,
+        },
+        {
+          headers: { "access-token": token },
+        }
+      );
 
       if (response.status === 200) {
         setExpenses(

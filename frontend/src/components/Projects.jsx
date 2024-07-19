@@ -15,15 +15,38 @@ function Projects() {
   const location = useLocation();
 
   useEffect(() => {
-    if (location.state?.isAuthenticated) {
+    const token = localStorage.getItem("token");
+    if (location.state?.isAuthenticated && token) {
       axios
-        .post(`${ip}/updateProjectDisplay`, { ongoing: true, completed: false })
-        .then((res) => axios.get(`${ip}/projects`))
+        .post(
+          `${ip}/updateProjectDisplay`,
+          { ongoing: true, completed: false },
+          {
+            headers: {
+              "access-token": token,
+            },
+          }
+        )
+        .then((res) =>
+          axios.get(`${ip}/projects`, {
+            headers: {
+              "access-token": token,
+            },
+          })
+        )
         .then((res) => {
           setProjects(res.data);
           return axios.all([
-            axios.get(`${ip}/projectEntriesStatus?checkExpenses=false`),
-            axios.get(`${ip}/projectEntriesStatus?checkExpenses=true`),
+            axios.get(`${ip}/projectEntriesStatus?checkExpenses=false`, {
+              headers: {
+                "access-token": token,
+              },
+            }),
+            axios.get(`${ip}/projectEntriesStatus?checkExpenses=true`, {
+              headers: {
+                "access-token": token,
+              },
+            }),
           ]);
         })
         .then(
@@ -48,28 +71,30 @@ function Projects() {
               {}
             );
             setExpensesStatus(expensesStatusData);
-
-            // Fetch notifications count for each project
-            projects.forEach((project) => {
-              fetchNotificationsCount(project.project_id);
-            });
           })
         )
-        .catch((error) => {
-          console.error(
-            "There was an error fetching the projects data!",
-            error
-          );
+        .catch((err) => {
+          console.error("Error fetching project data:", err);
+          // Handle token expiration or invalid token
+          if (err.response && err.response.status === 401) {
+            navigate("/login");
+          }
         });
     } else {
-      navigate("/");
+      navigate("/login");
     }
-  }, [location.state, navigate]);
+  }, [location.state?.isAuthenticated, navigate]);
 
   const fetchNotificationsCount = async (projectId) => {
+    const token = localStorage.getItem("token");
+
     try {
       const response = await axios.get(`${ip}/notifications`, {
         params: { project_id: projectId },
+        // Same {}
+        headers: {
+          "access-token": token,
+        },
       });
       const type1Count = response.data.filter(
         (noti) => noti.noti_type === 1
@@ -110,10 +135,19 @@ function Projects() {
   };
 
   const handleSave = async () => {
+    const token = localStorage.getItem("token");
     try {
-      const response = await axios.post(`${ip}/editProject`, {
-        ...editProject,
-      });
+      const response = await axios.post(
+        `${ip}/editProject`,
+        {
+          ...editProject,
+        },
+        {
+          headers: {
+            "access-token": token,
+          },
+        }
+      );
 
       if (response.status === 200) {
         setProjects(
@@ -142,11 +176,20 @@ function Projects() {
     const ongoing = document.getElementById("ongoingCheckbox").checked;
     const completed = document.getElementById("completedCheckbox").checked;
 
+    const token = localStorage.getItem("token");
     try {
-      const response = await axios.post(`${ip}/updateProjectDisplay`, {
-        ongoing: ongoing,
-        completed: completed,
-      });
+      const response = await axios.post(
+        `${ip}/updateProjectDisplay`,
+        {
+          ongoing: ongoing,
+          completed: completed,
+        },
+        {
+          headers: {
+            "access-token": token,
+          },
+        }
+      );
 
       if (response.status === 200) {
         if (ongoing && completed) {
@@ -159,12 +202,24 @@ function Projects() {
           setDisplayingMessage("Nothing");
         }
         await axios
-          .get(`${ip}/projects`)
+          .get(`${ip}/projects`, {
+            headers: {
+              "access-token": token,
+            },
+          })
           .then((res) => {
             setProjects(res.data);
             return axios.all([
-              axios.get(`${ip}/projectEntriesStatus?checkExpenses=false`),
-              axios.get(`${ip}/projectEntriesStatus?checkExpenses=true`),
+              axios.get(`${ip}/projectEntriesStatus?checkExpenses=false`, {
+                headers: {
+                  "access-token": token,
+                },
+              }),
+              axios.get(`${ip}/projectEntriesStatus?checkExpenses=true`, {
+                headers: {
+                  "access-token": token,
+                },
+              }),
             ]);
           })
           .then(
@@ -238,12 +293,25 @@ function Projects() {
     const isConfirmed = window.confirm(
       "Are you sure you want to delete this project?"
     );
+    const token = localStorage.getItem("token");
     if (isConfirmed) {
       try {
-        await axios.post(`${ip}/deleteMarkedProjects`, {
-          projectIds: [projectId],
+        await axios.post(
+          `${ip}/deleteMarkedProjects`,
+          {
+            projectIds: [projectId],
+          },
+          {
+            headers: {
+              "access-token": token,
+            },
+          }
+        );
+        const response = await axios.get(`${ip}/projects`, {
+          headers: {
+            "access-token": token,
+          },
         });
-        const response = await axios.get(`${ip}/projects`);
         if (response.status === 200) {
           setProjects(response.data);
         } else {

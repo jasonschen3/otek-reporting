@@ -26,15 +26,18 @@ function AddExpense() {
   const location = useLocation();
   const { projectId, projectTitle, isAuthenticated } = location.state || {};
   const nav = useNavigate();
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !token) {
       nav("/Unauthorized");
       return;
     }
     const fetchEngineers = async () => {
       try {
-        const res = await axios.get(`${ip}/engineers`);
+        const res = await axios.get(`${ip}/engineers`, {
+          headers: { "access-token": token },
+        });
         setEngineers(res.data);
       } catch (error) {
         console.error("There was an error fetching the engineers data", error);
@@ -50,6 +53,7 @@ function AddExpense() {
         try {
           const res = await axios.get(`${ip}/dailyLogs`, {
             params: { projectId, date: selectedDate },
+            headers: { "access-token": token },
           });
           setDailyLogs(res.data);
         } catch (error) {
@@ -92,7 +96,11 @@ function AddExpense() {
     };
 
     try {
-      const response = await axios.post(`${ip}/addExpense`, expenseData);
+      const response = await axios.post(`${ip}/addExpense`, expenseData, {
+        headers: {
+          "access-token": token,
+        },
+      });
       if (response.status === 200) {
         setNewExpense({
           expense_date: "",

@@ -21,13 +21,16 @@ function AddProject() {
   const { isAuthenticated } = location.state || {};
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    const token = localStorage.getItem("token");
+    if (!isAuthenticated || !token) {
       nav("/unauthorized");
       return;
     }
     const fetchEngineers = async () => {
       try {
-        const res = await axios.get(`${ip}/engineers`);
+        const res = await axios.get(`${ip}/engineers`, {
+          headers: { "access-token": token },
+        });
         setEngineers(res.data);
       } catch (error) {
         console.error("There was an error fetching the engineers data", error);
@@ -57,10 +60,19 @@ function AddProject() {
 
   const handleAddProject = async (e) => {
     e.preventDefault();
+    const token = localStorage.getItem("token");
     try {
-      const response = await axios.post(`${ip}/addProject`, {
-        ...newProject,
-      });
+      const response = await axios.post(
+        `${ip}/addProject`,
+        {
+          ...newProject,
+        },
+        {
+          headers: {
+            "access-token": token,
+          },
+        }
+      );
       // console.log(response.status);
       if (response.status === 200) {
         setNewProject({

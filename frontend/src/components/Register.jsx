@@ -5,8 +5,9 @@ import "../App.css";
 
 function Register() {
   let ip = "http://localhost:3000";
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [permissionLevel, setPermissionLevel] = useState(0);
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
@@ -15,8 +16,9 @@ function Register() {
 
     try {
       const response = await axios.post(`${ip}/register`, {
-        username: email,
+        username: username,
         password: password,
+        permission_level: permissionLevel,
       });
 
       if (response.status === 201) {
@@ -46,13 +48,13 @@ function Register() {
             <div className="card-body">
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                  <label htmlFor="email">Email</label>
+                  <label htmlFor="username">Username</label>
                   <input
-                    type="email"
+                    type="username"
                     className="form-control"
                     name="username"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     required
                   />
                 </div>
@@ -66,6 +68,20 @@ function Register() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="permissionLevel">Permission Level</label>
+                  <select
+                    className="form-control"
+                    name="permissionLevel"
+                    value={permissionLevel}
+                    onChange={(e) => setPermissionLevel(Number(e.target.value))}
+                    required
+                  >
+                    <option value={0}>View Only</option>
+                    <option value={1}>Upload Only</option>
+                    <option value={2}>Admin</option>
+                  </select>
                 </div>
                 <br />
                 <button type="submit" className="btn btn-dark">

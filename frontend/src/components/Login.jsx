@@ -19,6 +19,11 @@ function Login() {
       })
       .then((res) => {
         if (res.status === 200) {
+          console.log("Frontend login successful");
+
+          // Sets item, IMPORTANT
+          localStorage.setItem("token", res.data.token);
+          console.log(res.data);
           navigate("/projects", { state: { isAuthenticated: true } });
         } else {
           console.log("Wrong credentials");

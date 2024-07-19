@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const AddDailyLog = () => {
-  let ip = "http://localhost:3000";
+  const ip = "http://localhost:3000";
   const [newDailyLog, setNewDailyLog] = useState({
     project_id: "",
     log_date: "",
@@ -17,19 +17,24 @@ const AddDailyLog = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId, projectTitle, isAuthenticated } = location.state || {};
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !token) {
       navigate("/unauthorized");
       return;
     }
+
     setNewDailyLog((prevState) => ({
       ...prevState,
       project_id: projectId,
     }));
+
     const fetchEngineers = async () => {
       try {
-        const res = await axios.get(`${ip}/engineers`);
+        const res = await axios.get(`${ip}/engineers`, {
+          headers: { "access-token": token },
+        });
         setEngineers(res.data);
       } catch (error) {
         console.error("There was an error fetching the engineers data", error);
@@ -37,7 +42,7 @@ const AddDailyLog = () => {
     };
 
     fetchEngineers();
-  }, [isAuthenticated, projectId, navigate]);
+  }, [isAuthenticated, projectId, navigate, token]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -57,7 +62,9 @@ const AddDailyLog = () => {
     };
 
     try {
-      const response = await axios.post(`${ip}/addDailyLog`, formattedLog);
+      const response = await axios.post(`${ip}/addDailyLog`, formattedLog, {
+        headers: { "access-token": token },
+      });
       if (response.status === 200) {
         navigate(-1);
       } else {
@@ -93,7 +100,6 @@ const AddDailyLog = () => {
           value={newDailyLog.engineer_id}
           onChange={handleChange}
           className="form-control"
-          required
         >
           <option value="">Select Engineer</option>
           {engineers.map((engineer) => (
