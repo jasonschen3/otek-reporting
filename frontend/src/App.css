@@ -76,7 +76,7 @@ button:hover {
   } */
 
 .container {
-  width: 85%;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -193,5 +193,5 @@ button {
 }
 
 .wider-col {
-  width: 200px;
+  width: 300px;
 }

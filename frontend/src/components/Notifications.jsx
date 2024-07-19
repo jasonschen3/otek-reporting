@@ -4,7 +4,7 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 
 const Notifications = () => {
-  const ip = "http://localhost:3000";
+  let ip = "http://localhost:3000";
   const [notifications, setNotifications] = useState([]);
   const [permissionLevel, setPermissionLevel] = useState(0);
   const location = useLocation();

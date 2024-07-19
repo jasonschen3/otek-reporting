@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import "../App.css";
 
 function Register() {
   let ip = "http://localhost:3000";
@@ -10,22 +9,33 @@ function Register() {
   const [permissionLevel, setPermissionLevel] = useState(0);
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/unauthorized");
+      return;
+    }
+  });
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     try {
-      const response = await axios.post(`${ip}/register`, {
-        username: username,
-        password: password,
-        permission_level: permissionLevel,
-      });
+      const response = await axios.post(
+        `${ip}/register`,
+        {
+          username: username,
+          password: password,
+          permission_level: permissionLevel,
+        },
+        { headers: { "access-token": token } }
+      );
 
       if (response.status === 201) {
-        setMessage("Registration successful! Redirecting to login...");
+        setMessage("Registration successful! Redirecting to projects");
         setTimeout(() => {
-          // Base root is login
-          navigate("/");
+          navigate("/projects");
         }, 2000);
       } else {
         setMessage(response.data.message);
@@ -38,7 +48,9 @@ function Register() {
       }
     }
   };
-
+  function handleCancel() {
+    nav(-1);
+  }
   return (
     <div className="container mt-5">
       <h1>Register</h1>
@@ -84,8 +96,15 @@ function Register() {
                   </select>
                 </div>
                 <br />
-                <button type="submit" className="btn btn-dark">
+                <button type="submit" className="btn btn-primary">
                   Register
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleCancel}
+                >
+                  Cancel
                 </button>
               </form>
               {message && <p className="mt-3">{message}</p>}

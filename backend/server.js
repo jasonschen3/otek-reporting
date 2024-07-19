@@ -3,7 +3,6 @@ import bodyParser from "body-parser";
 import pg from "pg";
 import bcrypt from "bcrypt";
 import env from "dotenv";
-import moment from "moment-timezone";
 import cors from "cors";
 import jwt from "jsonwebtoken";
 
@@ -357,48 +356,47 @@ app.post("/updateProjectDisplay", verifyToken, async (req, res) => {
   res.redirect("/projects");
 });
 
-// app.post("/register", async (req, res) => {
-//   const username = req.body.username;
-//   const password = req.body.password;
-//   const permission_level = req.body.permission_level;
+app.post(
+  "/register",
+  verifyToken,
+  checkPermissionLevel(2),
+  async (req, res) => {
+    const { username, password, permission_level } = req.body;
 
-//   try {
-//     // Check if the username already exists
-//     const checkResult = await db.query(
-//       "SELECT * FROM users WHERE username = $1",
-//       [username]
-//     );
-//     console.log(checkResult.rows);
-//     if (checkResult.rows.length > 0) {
-//       return res.status(409).json({ message: "Username already exists" }); // 409 Conflict
-//     } else {
-//       bcrypt.hash(password, saltRounds, async (err, hash) => {
-//         if (err) {
-//           console.error("Error hashing password:", err);
-//           return res.status(500).json({ message: "Error hashing password" });
-//         } else {
-//           const result = await db.query(
-//             "INSERT INTO users (username, password, permission_level) VALUES ($1, $2, $3) RETURNING *",
-//             [username, hash, permission_level]
-//           );
-//           const user = result.rows[0];
-//           // console.log(result.rows);
-//           req.login(user, (err) => {
-//             if (err) {
-//               console.error("Error logging in user:", err);
-//               return res.status(500).json({ message: "Error logging in user" });
-//             }
-//             console.log("success");
-//             return res.status(201).json({ message: "Registration successful" }); // 201 Created
-//           });
-//         }
-//       });
-//     }
-//   } catch (err) {
-//     console.log(err);
-//     return res.status(500).json({ message: "Server error" });
-//   }
-// });
+    try {
+      // Check if the username already exists
+      const checkResult = await db.query(
+        "SELECT * FROM users WHERE username = $1",
+        [username]
+      );
+
+      if (checkResult.rows.length > 0) {
+        return res.status(409).json({ message: "Username already exists" }); // 409 Conflict
+      }
+
+      bcrypt.hash(password, saltRounds, async (err, hash) => {
+        if (err) {
+          console.error("Error hashing password:", err);
+          return res.status(500).json({ message: "Error hashing password" });
+        }
+
+        const result = await db.query(
+          "INSERT INTO users (username, password, permission_level) VALUES ($1, $2, $3) RETURNING *",
+          [username, hash, permission_level]
+        );
+
+        if (result.rows.length > 0) {
+          res.status(201).json({ message: "Registration successful" }); // 201 Created
+        } else {
+          res.status(500).json({ message: "Registration failed" }); // 500 Internal Server Error
+        }
+      });
+    } catch (err) {
+      console.error("Server error:", err);
+      return res.status(500).json({ message: "Server error" });
+    }
+  }
+);
 
 // Edit functionality
 app.post(

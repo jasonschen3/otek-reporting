@@ -4,14 +4,14 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 
 function Projects() {
-  const ip = "http://localhost:3000";
+  let ip = "http://localhost:3000";
   const [projects, setProjects] = useState([]);
   const [editProject, setEditProject] = useState(null);
   const [displayingMessage, setDisplayingMessage] = useState("Ongoing");
   const [entriesStatus, setEntriesStatus] = useState({});
   const [expensesStatus, setExpensesStatus] = useState({});
   const [notificationsCount, setNotificationsCount] = useState({});
-  const [permissionLevel, setPermissionLevel] = useState(0); // Store the user's permission level
+  const [permissionLevel, setPermissionLevel] = useState(0);
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -19,7 +19,9 @@ function Projects() {
   useEffect(() => {
     if (!token) {
       navigate("/login");
+      return;
     }
+
     // Decode token to get permission level
     const decoded = jwtDecode(token);
     setPermissionLevel(decoded.permission_level);
@@ -279,6 +281,10 @@ function Projects() {
     navigate("/addEngineers");
   };
 
+  const navigateToRegister = () => {
+    navigate("/register");
+  };
+
   const handleDeleteClick = async (projectId) => {
     const isConfirmed = window.confirm(
       "Are you sure you want to delete this project?"
@@ -350,6 +356,12 @@ function Projects() {
           {permissionLevel >= 2 && (
             <>
               <button
+                onClick={navigateToRegister}
+                className="btn btn-primary add"
+              >
+                Register
+              </button>
+              <button
                 onClick={navigateToAddEngineers}
                 className="btn btn-primary add"
               >
@@ -373,7 +385,6 @@ function Projects() {
             <th>Project Status</th>
             <th>Start Date</th>
             <th>End Date</th>
-            <th className="wider-col">Details</th>
             <th>Location</th>
             <th className="wider-col">Engineer Names</th>
             <th>Daily Logs</th>
@@ -390,7 +401,6 @@ function Projects() {
               <td>{project.project_status === 1 ? "Ongoing" : "Complete"}</td>
               <td>{project.start_date}</td>
               <td>{project.end_date}</td>
-              <td className="wider-col">{project.details}</td>
               <td>{project.location}</td>
               <td className="wider-col">
                 {project.engineer_names.split(", ").map((name, index) => (

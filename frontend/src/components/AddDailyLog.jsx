@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const AddDailyLog = () => {
-  const ip = "http://localhost:3000";
+  let ip = "http://localhost:3000";
   const [newDailyLog, setNewDailyLog] = useState({
     project_id: "",
     log_date: "",
