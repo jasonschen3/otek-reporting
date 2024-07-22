@@ -8,3 +8,6 @@ Daily logs:
 Expenses :
 - status: 0 1 2 , not-filled filled covered
 - expense type: 0-5, tools, transporation, meals, medical, accommodation, misc
+
+
+  // let ip = "http://35.87.99.183:3001";

@@ -200,8 +200,6 @@ const Expenses = () => {
       <table className="table mt-3">
         <thead>
           <tr>
-            <th>Expense ID</th>
-            <th>Project Name</th>
             <th>Expense Date</th>
             <th>Expense Type</th>
             <th>Expense Details</th>
@@ -220,8 +218,6 @@ const Expenses = () => {
           {expenses.length > 0 ? (
             expenses.map((expense) => (
               <tr key={expense.expense_id}>
-                <td>{expense.expense_id}</td>
-                <td>{expense.project_name}</td>
                 <td>{expense.expense_date}</td>
                 <td>
                   {expense.expense_type === 0

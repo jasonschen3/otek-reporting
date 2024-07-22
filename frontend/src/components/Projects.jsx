@@ -3,6 +3,13 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 
+const formatUrl = (url) => {
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    return `http://${url}`;
+  }
+  return url;
+};
+
 function Projects() {
   let ip = "http://localhost:3000";
   const [projects, setProjects] = useState([]);
@@ -11,6 +18,7 @@ function Projects() {
   const [entriesStatus, setEntriesStatus] = useState({});
   const [expensesStatus, setExpensesStatus] = useState({});
   const [notificationsCount, setNotificationsCount] = useState({});
+  const [latestInvoiceDates, setLatestInvoiceDates] = useState({});
   const [permissionLevel, setPermissionLevel] = useState(0);
 
   const navigate = useNavigate();
@@ -22,7 +30,6 @@ function Projects() {
       return;
     }
 
-    // Decode token to get permission level
     const decoded = jwtDecode(token);
     setPermissionLevel(decoded.permission_level);
 
@@ -47,19 +54,18 @@ function Projects() {
         setProjects(res.data);
         return axios.all([
           axios.get(`${ip}/projectEntriesStatus?checkExpenses=false`, {
-            headers: {
-              "access-token": token,
-            },
+            headers: { "access-token": token },
           }),
           axios.get(`${ip}/projectEntriesStatus?checkExpenses=true`, {
-            headers: {
-              "access-token": token,
-            },
+            headers: { "access-token": token },
+          }),
+          axios.get(`${ip}/latestInvoiceDates`, {
+            headers: { "access-token": token },
           }),
         ]);
       })
       .then(
-        axios.spread((entriesRes, expensesRes) => {
+        axios.spread((entriesRes, expensesRes, invoiceRes) => {
           const entriesStatusData = entriesRes.data.reduce((acc, status) => {
             acc[status.project_id] = {
               today: status.today,
@@ -77,6 +83,15 @@ function Projects() {
             return acc;
           }, {});
           setExpensesStatus(expensesStatusData);
+
+          const latestInvoiceDatesData = invoiceRes.data.reduce(
+            (acc, invoice) => {
+              acc[invoice.project_id] = invoice.latest_invoice_date;
+              return acc;
+            },
+            {}
+          );
+          setLatestInvoiceDates(latestInvoiceDatesData);
         })
       )
       .catch((err) => {
@@ -91,9 +106,7 @@ function Projects() {
     try {
       const response = await axios.get(`${ip}/notifications`, {
         params: { project_id: projectId },
-        headers: {
-          "access-token": token,
-        },
+        headers: { "access-token": token },
       });
       const type1Count = response.data.filter(
         (noti) => noti.noti_type === 1
@@ -136,13 +149,9 @@ function Projects() {
     try {
       const response = await axios.post(
         `${ip}/editProject`,
+        { ...editProject },
         {
-          ...editProject,
-        },
-        {
-          headers: {
-            "access-token": token,
-          },
+          headers: { "access-token": token },
         }
       );
 
@@ -175,14 +184,9 @@ function Projects() {
     try {
       const response = await axios.post(
         `${ip}/updateProjectDisplay`,
+        { ongoing: ongoing, completed: completed },
         {
-          ongoing: ongoing,
-          completed: completed,
-        },
-        {
-          headers: {
-            "access-token": token,
-          },
+          headers: { "access-token": token },
         }
       );
 
@@ -198,22 +202,16 @@ function Projects() {
         }
         await axios
           .get(`${ip}/projects`, {
-            headers: {
-              "access-token": token,
-            },
+            headers: { "access-token": token },
           })
           .then((res) => {
             setProjects(res.data);
             return axios.all([
               axios.get(`${ip}/projectEntriesStatus?checkExpenses=false`, {
-                headers: {
-                  "access-token": token,
-                },
+                headers: { "access-token": token },
               }),
               axios.get(`${ip}/projectEntriesStatus?checkExpenses=true`, {
-                headers: {
-                  "access-token": token,
-                },
+                headers: { "access-token": token },
               }),
             ]);
           })
@@ -254,10 +252,7 @@ function Projects() {
 
   const navigateToDailyLogs = (projectId, action) => {
     navigate("/dailyLogs", {
-      state: {
-        projectId,
-        action,
-      },
+      state: { projectId, action },
     });
   };
 
@@ -269,6 +264,12 @@ function Projects() {
 
   const navigateToNotifications = (project) => {
     navigate("/notifications", { state: { project } });
+  };
+
+  const navigateToInvoices = (project, action) => {
+    navigate("/invoices", {
+      state: { project, action },
+    });
   };
 
   const navigateToEditEngineers = (project) => {
@@ -293,19 +294,13 @@ function Projects() {
       try {
         await axios.post(
           `${ip}/deleteMarkedProjects`,
+          { projectIds: [projectId] },
           {
-            projectIds: [projectId],
-          },
-          {
-            headers: {
-              "access-token": token,
-            },
+            headers: { "access-token": token },
           }
         );
         const response = await axios.get(`${ip}/projects`, {
-          headers: {
-            "access-token": token,
-          },
+          headers: { "access-token": token },
         });
         if (response.status === 200) {
           setProjects(response.data);
@@ -380,15 +375,17 @@ function Projects() {
       <table className="table mt-3">
         <thead>
           <tr>
-            <th>ID</th>
             <th>Project Name</th>
             <th>Project Status</th>
             <th>Start Date</th>
             <th>End Date</th>
             <th>Location</th>
+            <th>Details</th>
+            <th>Quotation URL</th> {/* Add new column */}
             <th className="wider-col">Engineer Names</th>
             <th>Daily Logs</th>
             <th>Expenses</th>
+            <th>Invoices</th> {/* Add new column */}
             <th className="wider-col">Notifications</th>
             <th>Actions</th>
           </tr>
@@ -396,12 +393,23 @@ function Projects() {
         <tbody>
           {projects.map((project) => (
             <tr key={project.project_id}>
-              <td>{project.project_id}</td>
               <td className="project-name">{project.project_name}</td>
               <td>{project.project_status === 1 ? "Ongoing" : "Complete"}</td>
               <td>{project.start_date}</td>
               <td>{project.end_date}</td>
               <td>{project.location}</td>
+              <td>{project.details}</td>
+              <td>
+                {project.quotation_url && (
+                  <a
+                    href={formatUrl(project.quotation_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    PDF
+                  </a>
+                )}
+              </td>
               <td className="wider-col">
                 {project.engineer_names.split(", ").map((name, index) => (
                   <span key={index} className="engineer-name">
@@ -466,6 +474,21 @@ function Projects() {
                   Yesterday
                 </button>
                 <button onClick={() => navigateToExpenses(project, "View All")}>
+                  View All
+                </button>
+              </td>
+              <td>
+                <button
+                  onClick={() => navigateToInvoices(project, "Latest")}
+                  className={
+                    latestInvoiceDates[project.project_id]
+                      ? "btn btn-success"
+                      : "btn btn-danger"
+                  }
+                >
+                  Latest
+                </button>
+                <button onClick={() => navigateToInvoices(project, "View All")}>
                   View All
                 </button>
               </td>
@@ -571,6 +594,16 @@ function Projects() {
                 type="text"
                 name="location"
                 value={editProject.location}
+                onChange={handleChange}
+                className="form-control"
+              />
+            </div>
+            <div className="form-group">
+              <label>Quotation URL</label> {/* Add new field */}
+              <input
+                type="text"
+                name="quotation_url"
+                value={editProject.quotation_url}
                 onChange={handleChange}
                 className="form-control"
               />

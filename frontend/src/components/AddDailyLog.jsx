@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 const AddDailyLog = () => {
   let ip = "http://localhost:3000";
+
   const [newDailyLog, setNewDailyLog] = useState({
     project_id: "",
     log_date: "",

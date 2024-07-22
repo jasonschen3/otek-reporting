@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
 const DailyLogs = () => {
-  const ip = "http://localhost:3000";
+  let ip = "http://localhost:3000";
   const [dailyLogs, setDailyLogs] = useState([]);
   const [projectTitle, setProjectTitle] = useState("");
   const [editDailyLog, setEditDailyLog] = useState(null);
@@ -209,9 +209,7 @@ const DailyLogs = () => {
       <table className="table mt-3">
         <thead>
           <tr>
-            <th>Daily Log ID</th>
             <th>Log Date</th>
-            <th>Project Name</th>
             <th>Engineer</th>
             <th>Submitted</th>
             <th>Date Submitted</th>
@@ -230,9 +228,7 @@ const DailyLogs = () => {
                   log.daily_log_id === highlightLogId ? "highlight" : ""
                 }
               >
-                <td>{log.daily_log_id}</td>
                 <td>{log.log_date}</td>
-                <td>{log.project_name}</td>
                 <td>
                   {log.engineer_names
                     ? log.engineer_names.split(", ").map((name, index) => (

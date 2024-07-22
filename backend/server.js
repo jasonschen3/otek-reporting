@@ -37,7 +37,7 @@ function generateToken(user) {
     username: user.username,
     permission_level: user.permission_level, // Add user permissions here
   };
-  const options = { expiresIn: "1h" }; // Set token expiration time
+  const options = { expiresIn: "2h" }; // Set token expiration time
   console.log("generated");
   return jwt.sign(payload, secretKey, options);
 }
@@ -118,7 +118,8 @@ async function updateCompanyInfo() {
     TO_CHAR(p.end_date, 'YYYY-MM-DD') AS end_date, 
     COALESCE(STRING_AGG(e.name, ', '), '') AS engineer_names, 
     p.details, 
-    p.location
+    p.location,
+    p.quotation_urL
   FROM 
     projects p 
   LEFT JOIN 
@@ -128,7 +129,7 @@ async function updateCompanyInfo() {
   WHERE 
     p.project_status = $1 
   GROUP BY 
-    p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location
+    p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location, p.quotation_url
   ORDER BY 
     p.project_id;`;
 
@@ -627,6 +628,7 @@ app.post(
       details,
       location,
       engineer_ids,
+      quotation_url,
     } = req.body;
 
     try {
@@ -635,10 +637,18 @@ app.post(
       end_date = end_date === "" ? null : end_date;
 
       const newProjectResult = await db.query(
-        `INSERT INTO projects (project_name, project_status, start_date, end_date, details, location)
-       VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO projects (project_name, project_status, start_date, end_date, details, location, quotation_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-        [project_name, project_status, start_date, end_date, details, location]
+        [
+          project_name,
+          project_status,
+          start_date,
+          end_date,
+          details,
+          location,
+          quotation_url,
+        ]
       );
 
       const newProject = newProjectResult.rows[0];
@@ -680,7 +690,7 @@ app.post(
     } = req.body;
 
     const date_submitted = status_submitted === "1" ? new Date() : null;
-
+    console.log("Inside add daily log backend");
     try {
       const result = await db.query(
         `INSERT INTO daily_logs (
@@ -1112,6 +1122,187 @@ app.get("/missingLogs", verifyToken, async (req, res) => {
     console.error("Error calculating missing daily logs:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
+});
+
+// Invoices
+app.get("/invoices", (req, res) => {
+  const { project_id } = req.query;
+
+  const query = `
+    SELECT 
+      internal_id,
+      project_id,
+      invoice_number,
+      TO_CHAR(invoice_date, 'YYYY-MM-DD') AS invoice_date,
+      invoice_terms,
+      amount,
+      hasPaid,
+      invoice_url,
+      quotation_url,
+      purchase_url,
+      engineering_url,
+      include_logs,
+      note
+    FROM invoices
+    WHERE project_id = $1`;
+
+  const values = [project_id];
+
+  db.query(query, values, (error, results) => {
+    if (error) {
+      console.error("Error fetching invoices ", error);
+      return res.status(500).json({ error: error.message });
+    }
+    res.status(200).json(results.rows);
+  });
+});
+
+// Edit an invoice
+app.post("/editInvoice", (req, res) => {
+  const {
+    internal_id,
+    invoice_number,
+    invoice_date,
+    invoice_terms,
+    amount,
+    hasPaid,
+    invoice_url,
+    quotation_url,
+    purchase_url,
+    engineering_url,
+    include_logs,
+    note,
+  } = req.body;
+
+  const query = `
+      UPDATE invoices 
+      SET 
+          invoice_number = $1,
+          invoice_date = $2,
+          invoice_terms = $3,
+          amount = $4,
+          hasPaid = $5,
+          invoice_url = $6,
+          quotation_url = $7,
+          purchase_url = $8,
+          engineering_url = $9,
+          include_logs = $10,
+          note = $11
+      WHERE internal_id = $12
+      RETURNING *`;
+
+  const values = [
+    invoice_number,
+    invoice_date,
+    invoice_terms,
+    amount,
+    hasPaid,
+    invoice_url,
+    quotation_url,
+    purchase_url,
+    engineering_url,
+    include_logs,
+    note,
+    internal_id,
+  ];
+
+  db.query(query, values, (error, results) => {
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+    res.status(200).json(results.rows[0]);
+  });
+});
+
+// Add an invoice
+app.post("/addInvoice", (req, res) => {
+  const {
+    project_id,
+    invoice_number,
+    invoice_date,
+    invoice_terms,
+    amount,
+    hasPaid,
+    invoice_url,
+    quotation_url,
+    purchase_url,
+    engineering_url,
+    include_logs,
+    note,
+  } = req.body;
+
+  const query = `
+      INSERT INTO invoices (
+          project_id,
+          invoice_number,
+          invoice_date,
+          invoice_terms,
+          amount,
+          hasPaid,
+          invoice_url,
+          quotation_url,
+          purchase_url,
+          engineering_url,
+          include_logs,
+          note
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING *`;
+
+  const values = [
+    project_id,
+    invoice_number,
+    invoice_date,
+    invoice_terms,
+    amount,
+    hasPaid,
+    invoice_url,
+    quotation_url,
+    purchase_url,
+    engineering_url,
+    include_logs,
+    note,
+  ];
+
+  db.query(query, values, (error, results) => {
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+    res.status(200).json(results.rows[0]);
+  });
+});
+
+// Delete an invoice
+app.post("/deleteInvoice", (req, res) => {
+  const { internal_id } = req.body;
+
+  const query = `DELETE FROM invoices WHERE internal_id = $1 RETURNING *`;
+
+  const values = [internal_id];
+
+  db.query(query, values, (error, results) => {
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+    res.status(200).json(results.rows[0]);
+  });
+});
+
+app.get("/latestInvoiceDates", (req, res) => {
+  const query = `
+      SELECT 
+          project_id, 
+          TO_CHAR(MAX(invoice_date), 'YYYY-MM-DD') AS latest_invoice_date
+      FROM 
+          invoices
+      GROUP BY 
+          project_id`;
+
+  pool.query(query, (error, results) => {
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+    res.status(200).json(results.rows);
+  });
 });
 
 app.listen(port, () => {

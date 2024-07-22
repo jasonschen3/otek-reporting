@@ -12,6 +12,7 @@ function AddProject() {
     end_date: "",
     details: "",
     location: "",
+    quotation_url: "", // Added field
     engineer_ids: [],
   });
   const [engineers, setEngineers] = useState([]);
@@ -69,7 +70,6 @@ function AddProject() {
           },
         }
       );
-      // console.log(response.status);
       if (response.status === 200) {
         setNewProject({
           project_name: "",
@@ -78,6 +78,7 @@ function AddProject() {
           end_date: "",
           details: "",
           location: "",
+          quotation_url: "", // Reset field
           engineer_ids: [],
         });
         nav(-1);
@@ -157,6 +158,16 @@ function AddProject() {
           type="text"
           name="location"
           value={newProject.location}
+          onChange={handleNewProjectChange}
+          className="form-control"
+        />
+      </div>
+      <div className="form-group">
+        <label>Quotation URL</label>
+        <input
+          type="text"
+          name="quotation_url"
+          value={newProject.quotation_url}
           onChange={handleNewProjectChange}
           className="form-control"
         />

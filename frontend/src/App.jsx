@@ -15,6 +15,8 @@ import EditEngineers from "./components/EditEngineers";
 import Layout from "./components/Layout";
 import Notifications from "./components/Notifications";
 import AddEngineers from "./components/AddEngineers";
+import Invoices from "./components/Invoice";
+import AddInvoice from "./components/AddInvoice";
 
 function App() {
   return (
@@ -34,6 +36,8 @@ function App() {
           <Route path="/editEngineers" element={<EditEngineers />} />
           <Route path="/addEngineers" element={<AddEngineers />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/invoices" element={<Invoices />} />
+          <Route path="/addInvoice" element={<AddInvoice />} />
         </Route>
       </Routes>
     </BrowserRouter>
