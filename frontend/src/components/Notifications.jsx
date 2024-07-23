@@ -40,16 +40,15 @@ const Notifications = () => {
     nav(-1);
   };
 
-  const navAddDailyLog = () => {
+  const navAddInvoice = () => {
     if (permissionLevel >= 1) {
-      nav("/addDailyLog", {
+      nav("/addInvoice", {
         state: {
-          projectId: project.project_id,
-          projectTitle: project.project_name,
+          project: project,
         },
       });
     } else {
-      alert("You do not have permission to add daily logs.");
+      alert("You do not have permission to add invoice.");
     }
   };
 
@@ -81,7 +80,7 @@ const Notifications = () => {
         </button>
         <div>
           {permissionLevel >= 1 && (
-            <button className="btn btn-primary back" onClick={navAddDailyLog}>
+            <button className="btn btn-primary back" onClick={navAddInvoice}>
               Add Daily Log
             </button>
           )}

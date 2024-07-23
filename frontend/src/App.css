@@ -208,3 +208,8 @@ button {
   margin-left: 2vw;
   margin-right: 2vw;
 }
+
+td .btn,
+td button {
+  font-size: x-small;
+}

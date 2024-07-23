@@ -52,7 +52,6 @@ function verifyToken(req, res, next) {
     if (err) {
       return res.status(500).send("Failed to authenticate token");
     }
-    console.log("Verified");
     req.user = decoded; // Save the decoded token to request object
     next();
   });
@@ -181,7 +180,6 @@ app.get("/", async (req, res) => {
 });
 
 app.get("/projects", verifyToken, async (req, res) => {
-  console.log("Attempting to get projects");
   try {
     await updateCompanyInfo();
     res.json(projectsInfo);
@@ -201,6 +199,22 @@ app.post("/dailyLogs", verifyToken, async (req, res) => {
 
   const formattedToday = getFormattedDate(today);
   const formattedYesterday = getFormattedDate(yesterday);
+
+  let endDate = null;
+
+  try {
+    const endDateResult = await db.query(
+      "SELECT TO_CHAR(end_date, 'YYYY-MM-DD') AS end_date FROM projects WHERE project_id = $1",
+      [projectId]
+    );
+    if (endDateResult.rows.length > 0) {
+      endDate = endDateResult.rows[0].end_date;
+    }
+    // console.log("END DATE: ", endDate);
+  } catch (error) {
+    console.error("Error fetching end date:", error);
+    return res.status(500).send("Error fetching end date");
+  }
 
   let currDailyLogsInfo = null;
 
@@ -242,6 +256,11 @@ app.post("/dailyLogs", verifyToken, async (req, res) => {
       baseQuery +
       `GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
     params = [projectId];
+  } else if (action === "End Date" && endDate) {
+    query =
+      baseQuery +
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
+    params = [projectId, endDate];
   } else {
     return res.status(400).send("Unknown action");
   }
@@ -736,7 +755,7 @@ app.post(
           date_submitted,
         ]
       );
-
+      console.log("Daily log", result.rows[0]);
       res.status(200).json(result.rows[0]);
     } catch (err) {
       console.error("Error adding daily log:", err);
@@ -942,7 +961,11 @@ app.get("/projectEntriesStatus", verifyToken, async (req, res) => {
   const formattedYesterday = getFormattedDate(yesterday);
 
   try {
-    const projects = await db.query("SELECT project_id FROM projects");
+    const projects = await db.query(
+      "SELECT project_id, TO_CHAR(end_date, 'YYYY-MM-DD') AS end_date FROM projects"
+    );
+    console.log("Fetched projects:", projects.rows);
+
     const statusPromises = projects.rows.map(async (project) => {
       const todayStatus = await hasEntriesOrExpensesOnDate(
         project.project_id,
@@ -954,10 +977,22 @@ app.get("/projectEntriesStatus", verifyToken, async (req, res) => {
         formattedYesterday,
         checkExpenses === "true"
       );
+      const endDateStatus = project.end_date
+        ? await hasEntriesOrExpensesOnDate(
+            project.project_id,
+            project.end_date,
+            checkExpenses === "true"
+          )
+        : false;
+
+      console.log(
+        `Project ID: ${project.project_id}, Today Status: ${todayStatus}, Yesterday Status: ${yesterdayStatus}, End Date Status: ${endDateStatus}`
+      );
       return {
         project_id: project.project_id,
         today: todayStatus,
         yesterday: yesterdayStatus,
+        end_date_status: endDateStatus, // Include end_date status in the response
       };
     });
 
@@ -1002,7 +1037,7 @@ const checkAndUpdateNotifications = async () => {
     for (const project of projects.rows) {
       const { project_id } = project;
 
-      // Check for missing daily logs
+      // Check for missing invoices
       const projectResult = await db.query(
         `SELECT start_date, end_date FROM projects WHERE project_id = $1`,
         [project_id]
@@ -1022,13 +1057,14 @@ const checkAndUpdateNotifications = async () => {
 
       const totalDays =
         Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-      const logsResult = await db.query(
-        `SELECT log_date, status_submitted, received_payment FROM daily_logs WHERE project_id = $1`,
+
+      const invoiceResult = await db.query(
+        `SELECT invoice_date FROM invoices WHERE project_id = $1`,
         [project_id]
       );
 
-      const logDates = logsResult.rows.map(
-        (row) => row.log_date.toISOString().split("T")[0]
+      const invoiceDates = invoiceResult.rows.map(
+        (row) => row.invoice_date.toISOString().split("T")[0]
       );
       const missingDates = [];
 
@@ -1041,36 +1077,35 @@ const checkAndUpdateNotifications = async () => {
         if (isWeekend(date)) {
           continue;
         }
-
-        if (!logDates.includes(formattedDate)) {
+        if (!invoiceDates.includes(formattedDate)) {
           missingDates.push(formattedDate);
         }
       }
+
       // Add new notifications for missing dates
       for (const missingDate of missingDates) {
         await db.query(
           "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
-          [1, missingDate, "Daily log missing for " + missingDate, project_id]
+          [1, missingDate, "Invoice missing for " + missingDate, project_id]
         );
       }
 
-      // Check for daily logs where payment has not been received after 30 days
+      // Check for invoices where payment has not been received after 30 days
       const now = new Date();
-      for (const log of logsResult.rows) {
-        //FIXED BUG: BITS must be in quotes
-        if (log.status_submitted === "1" && log.received_payment === "0") {
-          const submittedDate = new Date(log.date_submitted);
+      for (const invoice of invoiceResult.rows) {
+        if (!invoice.hasPaid) {
+          const invoiceDate = new Date(invoice.invoice_date);
           const diffDays = Math.floor(
-            (now - submittedDate) / (1000 * 60 * 60 * 24)
+            (now - invoiceDate) / (1000 * 60 * 60 * 24)
           );
-          // console.log(diffDays, " diff days");
+
           if (diffDays > 30) {
             await db.query(
               "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
               [
                 2,
-                log.log_date,
-                "Payment not received for log on " + log.log_date,
+                invoice.invoice_date,
+                "Payment not received for invoice on " + invoice.invoice_date,
                 project_id,
               ]
             );
@@ -1079,7 +1114,7 @@ const checkAndUpdateNotifications = async () => {
       }
     }
 
-    // console.log("Notifications refreshed.");
+    console.log("Notifications refreshed.");
   } catch (error) {
     console.error("Error checking and updating notifications:", error);
   }
@@ -1236,7 +1271,7 @@ app.post("/editInvoice", (req, res) => {
 });
 
 // Add an invoice
-app.post("/addInvoice", (req, res) => {
+app.post("/addInvoice", checkPermissionLevel(1), (req, res) => {
   const {
     project_id,
     invoice_number,

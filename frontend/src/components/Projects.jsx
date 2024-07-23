@@ -11,6 +11,37 @@ const formatUrl = (url) => {
   return url;
 };
 
+const parseDate = (dateString) => {
+  return new Date(dateString);
+};
+
+const isSameDay = (date1, date2) => {
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  );
+};
+
+function checkYesterdayTodayRender(project) {
+  // 1) Render everything
+  if (project.end_date === null) {
+    return 1;
+  }
+  const startDate = parseDate(project.start_date);
+  const endDate = parseDate(project.end_date);
+  // 2) 1 day project so render only that day
+  if (project.start_date !== null && isSameDay(startDate, endDate)) {
+    return 2;
+  }
+  const today = new Date();
+  // 3) If today is after end_date, then render only the last 2 days
+  if (today > endDate) {
+    return 3;
+  }
+  return 1;
+}
+
 function Projects() {
   const [projects, setProjects] = useState([]);
   const [editProject, setEditProject] = useState(null);
@@ -68,6 +99,7 @@ function Projects() {
             acc[status.project_id] = {
               today: status.today,
               yesterday: status.yesterday,
+              end_date: status.end_date_status,
             };
             return acc;
           }, {});
@@ -179,6 +211,7 @@ function Projects() {
     event.preventDefault();
     const ongoing = document.getElementById("ongoingCheckbox").checked;
     const completed = document.getElementById("completedCheckbox").checked;
+
     try {
       const response = await axios.post(
         `${BACKEND_IP}/updateProjectDisplay`,
@@ -198,54 +231,40 @@ function Projects() {
         } else {
           setDisplayingMessage("Nothing");
         }
-        await axios
-          .get(`${BACKEND_IP}/projects`, {
-            headers: { "access-token": token },
-          })
-          .then((res) => {
-            setProjects(res.data);
-            return axios.all([
-              axios.get(
-                `${BACKEND_IP}/projectEntriesStatus?checkExpenses=false`,
-                {
-                  headers: { "access-token": token },
-                }
-              ),
-              axios.get(
-                `${BACKEND_IP}/projectEntriesStatus?checkExpenses=true`,
-                {
-                  headers: { "access-token": token },
-                }
-              ),
-            ]);
-          })
-          .then(
-            axios.spread((entriesRes, expensesRes) => {
-              const entriesStatusData = entriesRes.data.reduce(
-                (acc, status) => {
-                  acc[status.project_id] = {
-                    today: status.today,
-                    yesterday: status.yesterday,
-                  };
-                  return acc;
-                },
-                {}
-              );
-              setEntriesStatus(entriesStatusData);
 
-              const expensesStatusData = expensesRes.data.reduce(
-                (acc, status) => {
-                  acc[status.project_id] = {
-                    today: status.today,
-                    yesterday: status.yesterday,
-                  };
-                  return acc;
-                },
-                {}
-              );
-              setExpensesStatus(expensesStatusData);
-            })
-          );
+        const projectsResponse = await axios.get(`${BACKEND_IP}/projects`, {
+          headers: { "access-token": token },
+        });
+
+        setProjects(projectsResponse.data);
+
+        const [entriesRes, expensesRes] = await axios.all([
+          axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=false`, {
+            headers: { "access-token": token },
+          }),
+          axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=true`, {
+            headers: { "access-token": token },
+          }),
+        ]);
+
+        const entriesStatusData = entriesRes.data.reduce((acc, status) => {
+          acc[status.project_id] = {
+            today: status.today,
+            yesterday: status.yesterday,
+            end_date: status.end_date, // Include end_date here
+          };
+          return acc;
+        }, {});
+        setEntriesStatus(entriesStatusData);
+
+        const expensesStatusData = expensesRes.data.reduce((acc, status) => {
+          acc[status.project_id] = {
+            today: status.today,
+            yesterday: status.yesterday,
+          };
+          return acc;
+        }, {});
+        setExpensesStatus(expensesStatusData);
       } else {
         console.error("Failed to update project display");
       }
@@ -321,6 +340,10 @@ function Projects() {
       }
     }
   };
+  const formatDateString = (date) => {
+    const options = { year: "numeric", month: "2-digit", day: "2-digit" };
+    return date.toLocaleDateString(undefined, options);
+  };
 
   useEffect(() => {
     projects.forEach((project) => {
@@ -380,17 +403,17 @@ function Projects() {
         <thead>
           <tr>
             <th>Project Name</th>
-            <th>Project Status</th>
-            <th>Start Date</th>
-            <th>End Date</th>
+            <th>Status</th>
+            <th>Start</th>
+            <th>End</th>
             <th>Location</th>
             <th>Details</th>
-            <th>Quotation URL</th> {/* Add new column */}
-            <th className="wider-col">Engineer Names</th>
-            <th>Daily Logs</th>
+            <th>Quote</th> {/* Add new column */}
+            <th>Engineer Names</th>
+            <th>Logs</th>
             <th>Expenses</th>
             <th>Invoices</th> {/* Add new column */}
-            <th className="wider-col">Notifications</th>
+            <th>Notifications</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -424,30 +447,69 @@ function Projects() {
                 ))}
               </td>
               <td>
-                <button
-                  onClick={() =>
-                    navigateToDailyLogs(project.project_id, "Today")
-                  }
-                  className={
-                    entriesStatus[project.project_id]?.today
-                      ? "btn btn-success"
-                      : "btn btn-danger"
-                  }
-                >
-                  Today
-                </button>
-                <button
-                  onClick={() =>
-                    navigateToDailyLogs(project.project_id, "Yesterday")
-                  }
-                  className={
-                    entriesStatus[project.project_id]?.yesterday
-                      ? "btn btn-success"
-                      : "btn btn-danger"
-                  }
-                >
-                  Yesterday
-                </button>
+                {checkYesterdayTodayRender(project) === 1 && (
+                  <>
+                    <button
+                      onClick={() =>
+                        navigateToDailyLogs(project.project_id, "Today")
+                      }
+                      className={
+                        entriesStatus[project.project_id]?.today
+                          ? "btn btn-success"
+                          : "btn btn-danger"
+                      }
+                    >
+                      Today
+                    </button>
+                    <button
+                      onClick={() =>
+                        navigateToDailyLogs(project.project_id, "Yesterday")
+                      }
+                      className={
+                        entriesStatus[project.project_id]?.yesterday
+                          ? "btn btn-success"
+                          : "btn btn-danger"
+                      }
+                    >
+                      Yesterday
+                    </button>
+                  </>
+                )}
+                {checkYesterdayTodayRender(project) === 2 && (
+                  <>
+                    <button
+                      onClick={() =>
+                        navigateToDailyLogs(project.project_id, "End Date")
+                      }
+                      className={
+                        entriesStatus[project.project_id]?.end_date
+                          ? "btn btn-success"
+                          : "btn btn-danger"
+                      }
+                    >
+                      {project.end_date}
+                    </button>
+                    <button className="btn btn-secondary">Yesterday</button>
+                  </>
+                )}
+                {checkYesterdayTodayRender(project) === 3 && (
+                  <>
+                    <button
+                      onClick={() =>
+                        navigateToDailyLogs(project.project_id, "End Date")
+                      }
+                      className={
+                        entriesStatus[project.project_id]?.end_date
+                          ? "btn btn-success"
+                          : "btn btn-danger"
+                      }
+                    >
+                      {project.end_date}
+                    </button>
+                    <button className="btn btn-secondary">Yesterday</button>
+                  </>
+                )}
+
                 <button
                   onClick={() =>
                     navigateToDailyLogs(project.project_id, "View All")
@@ -456,6 +518,7 @@ function Projects() {
                   View All
                 </button>
               </td>
+
               <td>
                 <button
                   onClick={() => navigateToExpenses(project, "Today")}
@@ -538,7 +601,7 @@ function Projects() {
       </table>
       {editProject && (
         <div id="editProject" className="edit-form">
-          <h2>Edit Project {editProject.project_id}</h2>
+          <h2>Edit Project {editProject.project_name}</h2>
           <form>
             <div className="form-group">
               <label>Project Name</label>

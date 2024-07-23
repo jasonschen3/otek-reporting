@@ -9,7 +9,7 @@ const AddDailyLog = () => {
     log_date: "",
     engineer_id: "",
     status_submitted: "0",
-    date_submitted: "",
+    date_submitted: null,
     received_payment: "0",
     hours: "",
     pdf_url: "",
@@ -106,6 +106,7 @@ const AddDailyLog = () => {
           value={newDailyLog.engineer_id}
           onChange={handleChange}
           className="form-control"
+          required
         >
           <option value="">Select Engineer</option>
           {engineers.map((engineer) => (
