@@ -10,6 +10,7 @@ const AddDailyLog = () => {
     log_date: "",
     engineer_id: "",
     status_submitted: "0",
+    date_submitted: "",
     received_payment: "0",
     hours: "",
     pdf_url: "",
@@ -34,6 +35,7 @@ const AddDailyLog = () => {
     const fetchEngineers = async () => {
       try {
         const res = await axios.get(`${ip}/engineers`, {
+          params: { project_id: projectId },
           headers: { "access-token": token },
         });
         setEngineers(res.data);
@@ -43,7 +45,7 @@ const AddDailyLog = () => {
     };
 
     fetchEngineers();
-  }, []);
+  }, [navigate, projectId, token]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -121,6 +123,16 @@ const AddDailyLog = () => {
           <option value="1">Yes</option>
           <option value="0">No</option>
         </select>
+      </div>
+      <div className="form-group">
+        <label>Date Submitted</label>
+        <input
+          type="date"
+          name="date_submitted"
+          value={newDailyLog.date_submitted}
+          onChange={handleChange}
+          className="form-control"
+        />
       </div>
       <div className="form-group">
         <label>Received Payment</label>

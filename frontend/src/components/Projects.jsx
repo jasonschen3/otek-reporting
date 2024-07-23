@@ -59,7 +59,7 @@ function Projects() {
           axios.get(`${ip}/projectEntriesStatus?checkExpenses=true`, {
             headers: { "access-token": token },
           }),
-          axios.get(`${ip}/latestInvoiceDates`, {
+          axios.get(`${ip}/latestInvoiceDate`, {
             headers: { "access-token": token },
           }),
         ]);

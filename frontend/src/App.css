@@ -154,6 +154,9 @@ button {
 
 .project-name {
   font-weight: bold;
+  max-width: 150px;
+  word-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 /* Header styles */

@@ -19,7 +19,8 @@ function EditEngineers() {
 
     const fetchEngineers = async () => {
       try {
-        const response = await axios.get(`${ip}/engineers`, {
+        const response = await axios.get(`${ip}/allEngineers`, {
+          params: { project_id: project.project_id },
           headers: { "access-token": token },
         });
         setEngineers(response.data);

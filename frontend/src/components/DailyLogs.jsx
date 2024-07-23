@@ -304,6 +304,16 @@ const DailyLogs = () => {
               </select>
             </div>
             <div className="form-group">
+              <label>Date Submitted</label>
+              <input
+                type="date"
+                name="date_submitted"
+                value={editDailyLog.date_submitted || ""}
+                onChange={handleChange}
+                className="form-control"
+              />
+            </div>
+            <div className="form-group">
               <label>Received Payment</label>
               <select
                 name="received_payment"

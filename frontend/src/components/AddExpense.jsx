@@ -36,6 +36,7 @@ function AddExpense() {
     const fetchEngineers = async () => {
       try {
         const res = await axios.get(`${ip}/engineers`, {
+          params: { project_id: projectId },
           headers: { "access-token": token },
         });
         setEngineers(res.data);

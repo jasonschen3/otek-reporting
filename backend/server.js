@@ -537,16 +537,13 @@ app.post(
       hours,
       pdf_url,
       daily_log_id,
+      date_submitted,
     } = req.body;
 
-    let date_submitted = null;
-    if (status_submitted === "1") {
-      date_submitted = new Date().toISOString().split("T")[0]; // Current date in YYYY-MM-DD format
-    }
     try {
       const result = await db.query(
         `UPDATE daily_logs 
-       SET log_date = $1, status_submitted = $2, received_payment = $3, hours = $4, pdf_url = $5, date_submitted = COALESCE($6, date_submitted) 
+       SET log_date = $1, status_submitted = $2, received_payment = $3, hours = $4, pdf_url = $5, date_submitted = $6
        WHERE daily_log_id = $7 
        RETURNING *`,
         [
@@ -587,9 +584,35 @@ app.post("/title", verifyToken, async (req, res) => {
 });
 
 /////////////////////// Add functionality
-app.get("/engineers", verifyToken, async (req, res) => {
+app.get("/allEngineers", verifyToken, async (req, res) => {
   try {
-    const result = await db.query("SELECT * FROM engineers");
+    const query = `
+      SELECT *
+      FROM engineers
+      ORDER BY name ASC;
+    `;
+
+    const result = await db.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching engineers:", error);
+    res.status(500).send("Error fetching engineers");
+  }
+});
+
+app.get("/engineers", verifyToken, async (req, res) => {
+  const { project_id } = req.query;
+
+  try {
+    const query = `
+      SELECT e.*
+      FROM engineers e
+      JOIN projects_assign_engineers pae ON e.engineer_id = pae.engineer_id
+      WHERE pae.project_id = $1
+      ORDER BY e.name ASC;
+    `;
+
+    const result = await db.query(query, [project_id]);
     res.json(result.rows);
   } catch (error) {
     console.error("Error fetching engineers:", error);
@@ -687,10 +710,9 @@ app.post(
       received_payment,
       hours,
       pdf_url,
+      date_submitted,
     } = req.body;
 
-    const date_submitted = status_submitted === "1" ? new Date() : null;
-    console.log("Inside add daily log backend");
     try {
       const result = await db.query(
         `INSERT INTO daily_logs (
@@ -1287,22 +1309,21 @@ app.post("/deleteInvoice", (req, res) => {
   });
 });
 
-app.get("/latestInvoiceDates", (req, res) => {
-  const query = `
-      SELECT 
+app.get("/latestInvoiceDate", async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT 
           project_id, 
           TO_CHAR(MAX(invoice_date), 'YYYY-MM-DD') AS latest_invoice_date
       FROM 
           invoices
-      GROUP BY 
-          project_id`;
-
-  pool.query(query, (error, results) => {
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-    res.status(200).json(results.rows);
-  });
+      GROUP BY project_id`
+    );
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching latest invoice date:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.listen(port, () => {
