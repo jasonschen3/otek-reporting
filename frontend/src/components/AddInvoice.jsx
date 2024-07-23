@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import { jwtDecode } from "jwt-decode";
 import { BACKEND_IP } from "../constants";
 
 function AddInvoice() {
   const [newInvoice, setNewInvoice] = useState({
     project_id: null,
     invoice_number: "",
-    invoice_date: "",
+    invoice_date: null,
     invoice_terms: "",
     amount: 0,
-    hasPaid: false,
+    has_paid: false,
     invoice_url: "",
     quotation_url: "",
     purchase_url: "",
@@ -23,18 +22,15 @@ function AddInvoice() {
   const navigate = useNavigate();
   const location = useLocation();
   const token = localStorage.getItem("token");
+  const { project } = location.state || {};
 
   useEffect(() => {
     if (!token) {
-      navigate("/login");
+      navigate("/unauthorized");
       return;
     }
-    const decoded = jwtDecode(token);
-    const projectId = location.state?.projectId;
-    if (projectId) {
-      setNewInvoice((prev) => ({ ...prev, project_id: projectId }));
-    }
-  }, [navigate, location, token]);
+    setNewInvoice((prev) => ({ ...prev, project_id: project.project_id }));
+  }, [navigate, project, token]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -63,7 +59,10 @@ function AddInvoice() {
         setMessage("Failed to add invoice");
       }
     } catch (error) {
-      setMessage("Error adding invoice: " + error.response.data.message);
+      setMessage(
+        "Error adding invoice: " +
+          (error.response ? error.response.data.message : error.message)
+      );
       console.error("Error adding invoice:", error);
     }
   };
@@ -74,7 +73,7 @@ function AddInvoice() {
 
   return (
     <div className="container mt-5">
-      <h2>Add Invoice</h2>
+      <h2>Add Invoice for {project.project_name}</h2>
       <form onSubmit={handleAddInvoice}>
         <div className="form-group">
           <label>Invoice Number</label>
@@ -122,8 +121,8 @@ function AddInvoice() {
         <div className="form-group">
           <label>Has Paid</label>
           <select
-            name="hasPaid"
-            value={newInvoice.hasPaid}
+            name="has_paid"
+            value={newInvoice.has_paid}
             onChange={handleChange}
             className="form-control"
           >

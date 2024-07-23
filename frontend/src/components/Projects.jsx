@@ -109,6 +109,7 @@ function Projects() {
             acc[status.project_id] = {
               today: status.today,
               yesterday: status.yesterday,
+              end_date: status.end_date_status, // Include end_date status here
             };
             return acc;
           }, {});
@@ -251,7 +252,7 @@ function Projects() {
           acc[status.project_id] = {
             today: status.today,
             yesterday: status.yesterday,
-            end_date: status.end_date, // Include end_date here
+            end_date: status.end_date_status, // Include end_date status here
           };
           return acc;
         }, {});
@@ -261,6 +262,7 @@ function Projects() {
           acc[status.project_id] = {
             today: status.today,
             yesterday: status.yesterday,
+            end_date: status.end_date_status, // Include end_date status here
           };
           return acc;
         }, {});
@@ -520,26 +522,60 @@ function Projects() {
               </td>
 
               <td>
-                <button
-                  onClick={() => navigateToExpenses(project, "Today")}
-                  className={
-                    expensesStatus[project.project_id]?.today
-                      ? "btn btn-success"
-                      : "btn btn-danger"
-                  }
-                >
-                  Today
-                </button>
-                <button
-                  onClick={() => navigateToExpenses(project, "Yesterday")}
-                  className={
-                    expensesStatus[project.project_id]?.yesterday
-                      ? "btn btn-success"
-                      : "btn btn-danger"
-                  }
-                >
-                  Yesterday
-                </button>
+                {checkYesterdayTodayRender(project) === 1 && (
+                  <>
+                    <button
+                      onClick={() => navigateToExpenses(project, "Today")}
+                      className={
+                        expensesStatus[project.project_id]?.today
+                          ? "btn btn-success"
+                          : "btn btn-danger"
+                      }
+                    >
+                      Today
+                    </button>
+                    <button
+                      onClick={() => navigateToExpenses(project, "Yesterday")}
+                      className={
+                        expensesStatus[project.project_id]?.yesterday
+                          ? "btn btn-success"
+                          : "btn btn-danger"
+                      }
+                    >
+                      Yesterday
+                    </button>
+                  </>
+                )}
+                {checkYesterdayTodayRender(project) === 2 && (
+                  <>
+                    <button
+                      onClick={() => navigateToExpenses(project, "End Date")}
+                      className={
+                        expensesStatus[project.project_id]?.end_date
+                          ? "btn btn-success"
+                          : "btn btn-danger"
+                      }
+                    >
+                      {project.end_date}
+                    </button>
+                    <button className="btn btn-secondary">Yesterday</button>
+                  </>
+                )}
+                {checkYesterdayTodayRender(project) === 3 && (
+                  <>
+                    <button
+                      onClick={() => navigateToExpenses(project, "End Date")}
+                      className={
+                        expensesStatus[project.project_id]?.end_date
+                          ? "btn btn-success"
+                          : "btn btn-danger"
+                      }
+                    >
+                      {project.end_date}
+                    </button>
+                    <button className="btn btn-secondary">Yesterday</button>
+                  </>
+                )}
                 <button onClick={() => navigateToExpenses(project, "View All")}>
                   View All
                 </button>

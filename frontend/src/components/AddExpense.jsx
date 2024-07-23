@@ -46,7 +46,7 @@ function AddExpense() {
     };
 
     fetchEngineers();
-  }, [nav, BACKEND_IP]);
+  }, [nav]);
 
   useEffect(() => {
     if (selectedDate) {

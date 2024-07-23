@@ -29,7 +29,7 @@ function Invoices() {
     const decoded = jwtDecode(token);
     setPermissionLevel(decoded.permission_level);
 
-    if (project && project.project_id) {
+    try {
       axios
         .get(`${BACKEND_IP}/invoices`, {
           params: { project_id: project.project_id },
@@ -42,10 +42,9 @@ function Invoices() {
         })
         .catch((err) => {
           console.error("Error fetching invoices data:", err);
-          if (err.response && err.response.status === 401) {
-            navigate("/login");
-          }
         });
+    } catch (err) {
+      console.log("Error fetching invoices ", err);
     }
   }, [navigate, project, token]);
 
@@ -133,7 +132,7 @@ function Invoices() {
 
   const handleAddInvoice = () => {
     navigate("/addInvoice", {
-      state: { projectId: project.project_id },
+      state: { project: project },
     });
   };
 
@@ -181,7 +180,7 @@ function Invoices() {
                 <td>{invoice.invoice_date}</td>
                 <td>{invoice.invoice_terms}</td>
                 <td>{invoice.amount}</td>
-                <td>{invoice.hasPaid ? "Yes" : "No"}</td>
+                <td>{invoice.has_paid ? "Yes" : "No"}</td>
                 <td>
                   {invoice.invoice_url && (
                     <a
@@ -294,8 +293,8 @@ function Invoices() {
             <div className="form-group">
               <label>Has Paid</label>
               <select
-                name="hasPaid"
-                value={editInvoice.hasPaid}
+                name="has_paid"
+                value={editInvoice.has_paid}
                 onChange={handleChange}
                 className="form-control"
               >

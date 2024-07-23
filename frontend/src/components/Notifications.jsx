@@ -40,16 +40,24 @@ const Notifications = () => {
     nav(-1);
   };
 
-  const navAddInvoice = () => {
+  const navAddDailyLog = () => {
     if (permissionLevel >= 1) {
-      nav("/addInvoice", {
+      nav("/addDailyLog", {
         state: {
           project: project,
         },
       });
     } else {
-      alert("You do not have permission to add invoice.");
+      alert("You do not have permission to add a daily log.");
     }
+  };
+
+  const navViewInvoices = () => {
+    nav("/invoices", {
+      state: {
+        project: project,
+      },
+    });
   };
 
   const refreshNotifications = async () => {
@@ -80,15 +88,18 @@ const Notifications = () => {
         </button>
         <div>
           {permissionLevel >= 1 && (
-            <button className="btn btn-primary back" onClick={navAddInvoice}>
+            <button className="btn btn-primary add" onClick={navAddDailyLog}>
               Add Daily Log
             </button>
           )}
+          <button className="btn btn-primary add" onClick={navViewInvoices}>
+            View Invoices
+          </button>
           <button
-            className="btn btn-primary back"
+            className="btn btn-primary add"
             onClick={refreshNotifications}
           >
-            Refresh Notifications
+            Refresh
           </button>
         </div>
       </div>

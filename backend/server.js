@@ -284,6 +284,21 @@ app.post("/expenses", verifyToken, async (req, res) => {
   const formattedToday = getFormattedDate(today);
   const formattedYesterday = getFormattedDate(yesterday);
 
+  let endDate = null;
+
+  try {
+    const endDateResult = await db.query(
+      "SELECT TO_CHAR(end_date, 'YYYY-MM-DD') AS end_date FROM projects WHERE project_id = $1",
+      [projectId]
+    );
+    if (endDateResult.rows.length > 0) {
+      endDate = endDateResult.rows[0].end_date;
+    }
+  } catch (error) {
+    console.error("Error fetching end date:", error);
+    return res.status(500).send("Error fetching end date");
+  }
+
   let currExpensesInfo = null;
 
   const baseQuery = `
@@ -324,12 +339,21 @@ app.post("/expenses", verifyToken, async (req, res) => {
     currExpensesInfo = await db.query(baseQuery + "ORDER BY e.expense_id", [
       projectId,
     ]);
+  } else if (action === "End Date" && endDate) {
+    currExpensesInfo = await db.query(
+      baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_id",
+      [projectId, endDate]
+    );
   } else {
     return res.status(400).send("Unknown action");
   }
 
-  const expensesInfo = currExpensesInfo.rows;
-  res.json(expensesInfo);
+  try {
+    res.json(currExpensesInfo.rows);
+  } catch (error) {
+    console.error("Error fetching expenses:", error);
+    res.status(500).send("Error fetching expenses");
+  }
 });
 
 app.post(
@@ -985,9 +1009,6 @@ app.get("/projectEntriesStatus", verifyToken, async (req, res) => {
           )
         : false;
 
-      console.log(
-        `Project ID: ${project.project_id}, Today Status: ${todayStatus}, Yesterday Status: ${yesterdayStatus}, End Date Status: ${endDateStatus}`
-      );
       return {
         project_id: project.project_id,
         today: todayStatus,
@@ -1059,7 +1080,7 @@ const checkAndUpdateNotifications = async () => {
         Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
       const invoiceResult = await db.query(
-        `SELECT invoice_date FROM invoices WHERE project_id = $1`,
+        `SELECT invoice_date, has_paid, amount FROM invoices WHERE project_id = $1`,
         [project_id]
       );
 
@@ -1093,13 +1114,20 @@ const checkAndUpdateNotifications = async () => {
       // Check for invoices where payment has not been received after 30 days
       const now = new Date();
       for (const invoice of invoiceResult.rows) {
-        if (!invoice.hasPaid) {
+        console.log("Invoice amount ", invoice.amount);
+        if (invoice.amount == 0) {
+          continue;
+        }
+        if (!invoice.has_paid) {
           const invoiceDate = new Date(invoice.invoice_date);
           const diffDays = Math.floor(
             (now - invoiceDate) / (1000 * 60 * 60 * 24)
           );
 
           if (diffDays > 30) {
+            console.log(
+              `Adding notification for overdue invoice on ${invoice.invoice_date}`
+            );
             await db.query(
               "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
               [
@@ -1192,7 +1220,7 @@ app.get("/invoices", (req, res) => {
       TO_CHAR(invoice_date, 'YYYY-MM-DD') AS invoice_date,
       invoice_terms,
       amount,
-      hasPaid,
+      has_paid,
       invoice_url,
       quotation_url,
       purchase_url,
@@ -1214,14 +1242,14 @@ app.get("/invoices", (req, res) => {
 });
 
 // Edit an invoice
-app.post("/editInvoice", (req, res) => {
+app.post("/editInvoice", verifyToken, checkPermissionLevel(2), (req, res) => {
   const {
     internal_id,
     invoice_number,
     invoice_date,
     invoice_terms,
     amount,
-    hasPaid,
+    has_paid,
     invoice_url,
     quotation_url,
     purchase_url,
@@ -1237,7 +1265,7 @@ app.post("/editInvoice", (req, res) => {
           invoice_date = $2,
           invoice_terms = $3,
           amount = $4,
-          hasPaid = $5,
+          has_paid = $5,
           invoice_url = $6,
           quotation_url = $7,
           purchase_url = $8,
@@ -1252,7 +1280,7 @@ app.post("/editInvoice", (req, res) => {
     invoice_date,
     invoice_terms,
     amount,
-    hasPaid,
+    has_paid,
     invoice_url,
     quotation_url,
     purchase_url,
@@ -1271,14 +1299,14 @@ app.post("/editInvoice", (req, res) => {
 });
 
 // Add an invoice
-app.post("/addInvoice", checkPermissionLevel(1), (req, res) => {
+app.post("/addInvoice", verifyToken, checkPermissionLevel(1), (req, res) => {
   const {
     project_id,
     invoice_number,
     invoice_date,
     invoice_terms,
     amount,
-    hasPaid,
+    has_paid,
     invoice_url,
     quotation_url,
     purchase_url,
@@ -1294,7 +1322,7 @@ app.post("/addInvoice", checkPermissionLevel(1), (req, res) => {
           invoice_date,
           invoice_terms,
           amount,
-          hasPaid,
+          has_paid,
           invoice_url,
           quotation_url,
           purchase_url,
@@ -1310,7 +1338,7 @@ app.post("/addInvoice", checkPermissionLevel(1), (req, res) => {
     invoice_date,
     invoice_terms,
     amount,
-    hasPaid,
+    has_paid,
     invoice_url,
     quotation_url,
     purchase_url,
