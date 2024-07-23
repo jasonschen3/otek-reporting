@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import { BACKEND_IP } from "../constants";
 
 const DailyLogs = () => {
-  let ip = "http://localhost:3000";
   const [dailyLogs, setDailyLogs] = useState([]);
   const [projectTitle, setProjectTitle] = useState("");
   const [editDailyLog, setEditDailyLog] = useState(null);
@@ -26,7 +26,7 @@ const DailyLogs = () => {
     const fetchDailyLogs = async () => {
       try {
         const response = await axios.post(
-          `${ip}/dailyLogs`,
+          `${BACKEND_IP}/dailyLogs`,
           {
             project_id: projectId,
             action: action,
@@ -48,7 +48,7 @@ const DailyLogs = () => {
     const fetchProjectName = async () => {
       try {
         const response = await axios.post(
-          `${ip}/title`,
+          `${BACKEND_IP}/title`,
           {
             project_id: projectId,
           },
@@ -99,7 +99,7 @@ const DailyLogs = () => {
       if (isConfirmed) {
         try {
           await axios.post(
-            `${ip}/deleteMarkedDailyLogs`,
+            `${BACKEND_IP}/deleteMarkedDailyLogs`,
             {
               dailyLogIds: [logId],
             },
@@ -108,7 +108,7 @@ const DailyLogs = () => {
             }
           );
           const response = await axios.post(
-            `${ip}/dailyLogs`,
+            `${BACKEND_IP}/dailyLogs`,
             {
               project_id: projectId,
               action: action,
@@ -161,7 +161,7 @@ const DailyLogs = () => {
   const handleSave = async () => {
     try {
       const response = await axios.post(
-        `${ip}/editDailyLog`,
+        `${BACKEND_IP}/editDailyLog`,
         {
           ...editDailyLog,
         },

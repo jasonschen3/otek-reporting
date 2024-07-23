@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { BACKEND_IP } from "../constants";
 
 function Login() {
-  let ip = "http://localhost:3000";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -13,7 +13,7 @@ function Login() {
     event.preventDefault();
     console.log("username react", username);
     axios
-      .post(`${ip}/login`, {
+      .post(`${BACKEND_IP}/login`, {
         username: username,
         password: password,
       })
@@ -76,9 +76,6 @@ function Login() {
               ) : (
                 <p></p>
               )}
-              {/* <Link to="/register" className="btn btn-info b-110">
-                Register
-              </Link> */}
             </div>
           </div>
         </div>

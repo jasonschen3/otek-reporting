@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { format } from "date-fns";
+import { BACKEND_IP } from "../constants";
 
 function AddExpense() {
-  let ip = "http://localhost:3000";
   const [message, setMessage] = useState("");
   const [newExpense, setNewExpense] = useState({
     expense_date: "",
@@ -35,7 +35,7 @@ function AddExpense() {
     }
     const fetchEngineers = async () => {
       try {
-        const res = await axios.get(`${ip}/engineers`, {
+        const res = await axios.get(`${BACKEND_IP}/engineers`, {
           params: { project_id: projectId },
           headers: { "access-token": token },
         });
@@ -46,13 +46,13 @@ function AddExpense() {
     };
 
     fetchEngineers();
-  }, [nav, ip]);
+  }, [nav, BACKEND_IP]);
 
   useEffect(() => {
     if (selectedDate) {
       const fetchDailyLogs = async () => {
         try {
-          const res = await axios.get(`${ip}/dailyLogs`, {
+          const res = await axios.get(`${BACKEND_IP}/dailyLogs`, {
             params: { projectId, date: selectedDate },
             headers: { "access-token": token },
           });
@@ -97,11 +97,15 @@ function AddExpense() {
     };
 
     try {
-      const response = await axios.post(`${ip}/addExpense`, expenseData, {
-        headers: {
-          "access-token": token,
-        },
-      });
+      const response = await axios.post(
+        `${BACKEND_IP}/addExpense`,
+        expenseData,
+        {
+          headers: {
+            "access-token": token,
+          },
+        }
+      );
       if (response.status === 200) {
         setNewExpense({
           expense_date: "",

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
+import { BACKEND_IP } from "../constants";
 
 const formatUrl = (url) => {
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
@@ -11,7 +12,6 @@ const formatUrl = (url) => {
 };
 
 function Invoices() {
-  let ip = "http://localhost:3000";
   const [invoices, setInvoices] = useState([]);
   const [editInvoice, setEditInvoice] = useState(null);
   const [permissionLevel, setPermissionLevel] = useState(0);
@@ -31,7 +31,7 @@ function Invoices() {
 
     if (project && project.project_id) {
       axios
-        .get(`${ip}/invoices`, {
+        .get(`${BACKEND_IP}/invoices`, {
           params: { project_id: project.project_id },
           headers: {
             "access-token": token,
@@ -66,7 +66,7 @@ function Invoices() {
     if (isConfirmed) {
       try {
         const response = await axios.post(
-          `${ip}/deleteInvoice`,
+          `${BACKEND_IP}/deleteInvoice`,
           { internal_id: invoiceId },
           {
             headers: {
@@ -98,7 +98,7 @@ function Invoices() {
   const handleSave = async () => {
     try {
       const response = await axios.post(
-        `${ip}/editInvoice`,
+        `${BACKEND_IP}/editInvoice`,
         {
           ...editInvoice,
         },

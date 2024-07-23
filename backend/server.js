@@ -6,9 +6,6 @@ import env from "dotenv";
 import cors from "cors";
 import jwt from "jsonwebtoken";
 
-const port = 3000;
-const saltRounds = 10;
-
 env.config();
 const app = express();
 
@@ -17,6 +14,8 @@ app.use(express.static("public"));
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+const port = process.env.BACKEND_PORT;
+const saltRounds = 10;
 const db = new pg.Client({
   user: process.env.PG_USER,
   host: process.env.PG_HOST,
@@ -1312,7 +1311,8 @@ app.post("/deleteInvoice", (req, res) => {
 app.get("/latestInvoiceDate", async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT 
+      `
+      SELECT 
           project_id, 
           TO_CHAR(MAX(invoice_date), 'YYYY-MM-DD') AS latest_invoice_date
       FROM 

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
+import { BACKEND_IP } from "../constants";
 
 const AddDailyLog = () => {
-  let ip = "http://localhost:3000";
-
   const [newDailyLog, setNewDailyLog] = useState({
     project_id: "",
     log_date: "",
@@ -34,7 +33,7 @@ const AddDailyLog = () => {
 
     const fetchEngineers = async () => {
       try {
-        const res = await axios.get(`${ip}/engineers`, {
+        const res = await axios.get(`${BACKEND_IP}/engineers`, {
           params: { project_id: projectId },
           headers: { "access-token": token },
         });
@@ -65,9 +64,13 @@ const AddDailyLog = () => {
     };
 
     try {
-      const response = await axios.post(`${ip}/addDailyLog`, formattedLog, {
-        headers: { "access-token": token },
-      });
+      const response = await axios.post(
+        `${BACKEND_IP}/addDailyLog`,
+        formattedLog,
+        {
+          headers: { "access-token": token },
+        }
+      );
       if (response.status === 200) {
         navigate(-1);
       } else {

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
+import { BACKEND_IP } from "../constants";
 
 function AddInvoice() {
-  let ip = "http://localhost:3000";
   const [newInvoice, setNewInvoice] = useState({
     project_id: null,
     invoice_number: "",
@@ -48,7 +48,7 @@ function AddInvoice() {
     e.preventDefault();
     try {
       const response = await axios.post(
-        `${ip}/addInvoice`,
+        `${BACKEND_IP}/addInvoice`,
         { ...newInvoice },
         {
           headers: {

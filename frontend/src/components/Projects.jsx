@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
+import { BACKEND_IP } from "../constants";
 
 const formatUrl = (url) => {
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
@@ -11,7 +12,6 @@ const formatUrl = (url) => {
 };
 
 function Projects() {
-  let ip = "http://localhost:3000";
   const [projects, setProjects] = useState([]);
   const [editProject, setEditProject] = useState(null);
   const [displayingMessage, setDisplayingMessage] = useState("Ongoing");
@@ -29,13 +29,11 @@ function Projects() {
       navigate("/login");
       return;
     }
-
     const decoded = jwtDecode(token);
     setPermissionLevel(decoded.permission_level);
-
     axios
       .post(
-        `${ip}/updateProjectDisplay`,
+        `${BACKEND_IP}/updateProjectDisplay`,
         { ongoing: true, completed: false },
         {
           headers: {
@@ -44,7 +42,7 @@ function Projects() {
         }
       )
       .then((res) =>
-        axios.get(`${ip}/projects`, {
+        axios.get(`${BACKEND_IP}/projects`, {
           headers: {
             "access-token": token,
           },
@@ -53,13 +51,13 @@ function Projects() {
       .then((res) => {
         setProjects(res.data);
         return axios.all([
-          axios.get(`${ip}/projectEntriesStatus?checkExpenses=false`, {
+          axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=false`, {
             headers: { "access-token": token },
           }),
-          axios.get(`${ip}/projectEntriesStatus?checkExpenses=true`, {
+          axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=true`, {
             headers: { "access-token": token },
           }),
-          axios.get(`${ip}/latestInvoiceDate`, {
+          axios.get(`${BACKEND_IP}/latestInvoiceDate`, {
             headers: { "access-token": token },
           }),
         ]);
@@ -104,7 +102,7 @@ function Projects() {
 
   const fetchNotificationsCount = async (projectId) => {
     try {
-      const response = await axios.get(`${ip}/notifications`, {
+      const response = await axios.get(`${BACKEND_IP}/notifications`, {
         params: { project_id: projectId },
         headers: { "access-token": token },
       });
@@ -148,7 +146,7 @@ function Projects() {
   const handleSave = async () => {
     try {
       const response = await axios.post(
-        `${ip}/editProject`,
+        `${BACKEND_IP}/editProject`,
         { ...editProject },
         {
           headers: { "access-token": token },
@@ -183,7 +181,7 @@ function Projects() {
     const completed = document.getElementById("completedCheckbox").checked;
     try {
       const response = await axios.post(
-        `${ip}/updateProjectDisplay`,
+        `${BACKEND_IP}/updateProjectDisplay`,
         { ongoing: ongoing, completed: completed },
         {
           headers: { "access-token": token },
@@ -201,18 +199,24 @@ function Projects() {
           setDisplayingMessage("Nothing");
         }
         await axios
-          .get(`${ip}/projects`, {
+          .get(`${BACKEND_IP}/projects`, {
             headers: { "access-token": token },
           })
           .then((res) => {
             setProjects(res.data);
             return axios.all([
-              axios.get(`${ip}/projectEntriesStatus?checkExpenses=false`, {
-                headers: { "access-token": token },
-              }),
-              axios.get(`${ip}/projectEntriesStatus?checkExpenses=true`, {
-                headers: { "access-token": token },
-              }),
+              axios.get(
+                `${BACKEND_IP}/projectEntriesStatus?checkExpenses=false`,
+                {
+                  headers: { "access-token": token },
+                }
+              ),
+              axios.get(
+                `${BACKEND_IP}/projectEntriesStatus?checkExpenses=true`,
+                {
+                  headers: { "access-token": token },
+                }
+              ),
             ]);
           })
           .then(
@@ -293,13 +297,13 @@ function Projects() {
     if (isConfirmed) {
       try {
         await axios.post(
-          `${ip}/deleteMarkedProjects`,
+          `${BACKEND_IP}/deleteMarkedProjects`,
           { projectIds: [projectId] },
           {
             headers: { "access-token": token },
           }
         );
-        const response = await axios.get(`${ip}/projects`, {
+        const response = await axios.get(`${BACKEND_IP}/projects`, {
           headers: { "access-token": token },
         });
         if (response.status === 200) {
@@ -325,7 +329,7 @@ function Projects() {
   }, [projects]);
 
   return (
-    <div className="container mt-5">
+    <div className="project-container mt-5">
       <h1>Projects Report</h1>
       <div className="subheading">
         <form onSubmit={handleUpdateProjectDisplay}>

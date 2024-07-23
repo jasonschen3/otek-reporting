@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import { BACKEND_IP } from "../constants";
 
 const Expenses = () => {
-  const ip = "http://localhost:3000";
   const [expenses, setExpenses] = useState([]);
   const [editExpense, setEditExpense] = useState(null);
   const [permissionLevel, setPermissionLevel] = useState(0);
@@ -26,7 +26,7 @@ const Expenses = () => {
     async function fetchExpenses() {
       try {
         const response = await axios.post(
-          `${ip}/expenses`,
+          `${BACKEND_IP}/expenses`,
           {
             project_id: project.project_id,
             action: action,
@@ -90,7 +90,7 @@ const Expenses = () => {
       if (isConfirmed) {
         try {
           await axios.post(
-            `${ip}/deleteMarkedExpenses`,
+            `${BACKEND_IP}/deleteMarkedExpenses`,
             {
               expenseIds: [expenseId],
             },
@@ -99,7 +99,7 @@ const Expenses = () => {
             }
           );
           const response = await axios.post(
-            `${ip}/expenses`,
+            `${BACKEND_IP}/expenses`,
             {
               project_id: project.project_id,
               action: action,
@@ -148,7 +148,7 @@ const Expenses = () => {
   const handleSave = async () => {
     try {
       const response = await axios.post(
-        `${ip}/editExpense`,
+        `${BACKEND_IP}/editExpense`,
         {
           ...editExpense,
         },

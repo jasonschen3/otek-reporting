@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { BACKEND_IP } from "../constants";
 
 function Register() {
-  let ip = "http://localhost:3000";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [permissionLevel, setPermissionLevel] = useState(0);
@@ -23,7 +23,7 @@ function Register() {
 
     try {
       const response = await axios.post(
-        `${ip}/register`,
+        `${BACKEND_IP}/register`,
         {
           username: username,
           password: password,

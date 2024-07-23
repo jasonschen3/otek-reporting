@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { BACKEND_IP } from "../constants";
 
 function AddProject() {
-  let ip = "http://localhost:3000";
   const [message, setMessage] = useState("");
   const [newProject, setNewProject] = useState({
     project_name: "",
@@ -26,7 +26,7 @@ function AddProject() {
     }
     const fetchEngineers = async () => {
       try {
-        const res = await axios.get(`${ip}/engineers`, {
+        const res = await axios.get(`${BACKEND_IP}/engineers`, {
           headers: { "access-token": token },
         });
         setEngineers(res.data);
@@ -60,7 +60,7 @@ function AddProject() {
     e.preventDefault();
     try {
       const response = await axios.post(
-        `${ip}/addProject`,
+        `${BACKEND_IP}/addProject`,
         {
           ...newProject,
         },

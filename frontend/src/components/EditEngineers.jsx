@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { BACKEND_IP } from "../constants";
 
 function EditEngineers() {
-  const ip = "http://localhost:3000";
   const [engineers, setEngineers] = useState([]);
   const [assignedEngineers, setAssignedEngineers] = useState([]);
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ function EditEngineers() {
 
     const fetchEngineers = async () => {
       try {
-        const response = await axios.get(`${ip}/allEngineers`, {
+        const response = await axios.get(`${BACKEND_IP}/allEngineers`, {
           params: { project_id: project.project_id },
           headers: { "access-token": token },
         });
@@ -31,10 +31,13 @@ function EditEngineers() {
 
     const fetchAssignedEngineers = async () => {
       try {
-        const response = await axios.get(`${ip}/projects_assign_engineers`, {
-          params: { project_id: project.project_id },
-          headers: { "access-token": token },
-        });
+        const response = await axios.get(
+          `${BACKEND_IP}/projects_assign_engineers`,
+          {
+            params: { project_id: project.project_id },
+            headers: { "access-token": token },
+          }
+        );
         setAssignedEngineers(
           response.data.map((engineer) => engineer.engineer_id.toString())
         );
@@ -63,7 +66,7 @@ function EditEngineers() {
   const handleSave = async () => {
     try {
       await axios.post(
-        `${ip}/updateProjectEngineers`,
+        `${BACKEND_IP}/updateProjectEngineers`,
         {
           project_id: project.project_id,
           engineer_ids: assignedEngineers,

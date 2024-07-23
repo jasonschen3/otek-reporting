@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
+import { BACKEND_IP } from "../constants";
 
 const Notifications = () => {
-  let ip = "http://localhost:3000";
   const [notifications, setNotifications] = useState([]);
   const [permissionLevel, setPermissionLevel] = useState(0);
   const location = useLocation();
@@ -23,7 +23,7 @@ const Notifications = () => {
 
     const fetchNotifications = async () => {
       try {
-        const response = await axios.get(`${ip}/notifications`, {
+        const response = await axios.get(`${BACKEND_IP}/notifications`, {
           params: { project_id: project.project_id },
           headers: { "access-token": token },
         });
@@ -56,13 +56,13 @@ const Notifications = () => {
   const refreshNotifications = async () => {
     try {
       await axios.post(
-        `${ip}/updateNotifications`,
+        `${BACKEND_IP}/updateNotifications`,
         {},
         {
           headers: { "access-token": token },
         }
       );
-      const response = await axios.get(`${ip}/notifications`, {
+      const response = await axios.get(`${BACKEND_IP}/notifications`, {
         params: { project_id: project.project_id },
         headers: { "access-token": token },
       });
