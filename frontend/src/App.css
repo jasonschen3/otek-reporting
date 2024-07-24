@@ -196,6 +196,7 @@ button {
 
 .wider-col {
   min-width: 190px;
+  max-width: 190px;
   font-size: small;
 }
 

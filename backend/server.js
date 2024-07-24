@@ -455,11 +455,12 @@ app.post(
       end_date,
       details,
       location,
+      quotation_url,
     } = req.body;
 
     try {
       const result = await db.query(
-        `UPDATE projects SET project_name = $1, project_status = $2, start_date = $3, end_date = $4, details = $5, location = $6 WHERE project_id = $7 RETURNING *`,
+        `UPDATE projects SET project_name = $1, project_status = $2, start_date = $3, end_date = $4, details = $5, location = $6 , quotation_url=$7 WHERE project_id = $8 RETURNING *`,
         [
           project_name,
           project_status,
@@ -467,6 +468,7 @@ app.post(
           end_date,
           details,
           location,
+          quotation_url,
           project_id,
         ]
       );
@@ -988,7 +990,6 @@ app.get("/projectEntriesStatus", verifyToken, async (req, res) => {
     const projects = await db.query(
       "SELECT project_id, TO_CHAR(end_date, 'YYYY-MM-DD') AS end_date FROM projects"
     );
-    console.log("Fetched projects:", projects.rows);
 
     const statusPromises = projects.rows.map(async (project) => {
       const todayStatus = await hasEntriesOrExpensesOnDate(
@@ -1058,7 +1059,7 @@ const checkAndUpdateNotifications = async () => {
     for (const project of projects.rows) {
       const { project_id } = project;
 
-      // Check for missing invoices
+      // Check for missing daily logs
       const projectResult = await db.query(
         `SELECT start_date, end_date FROM projects WHERE project_id = $1`,
         [project_id]
@@ -1079,13 +1080,13 @@ const checkAndUpdateNotifications = async () => {
       const totalDays =
         Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
-      const invoiceResult = await db.query(
-        `SELECT invoice_date, has_paid, amount FROM invoices WHERE project_id = $1`,
+      const dailyLogResult = await db.query(
+        `SELECT log_date, status_submitted, hours FROM daily_logs WHERE project_id = $1`,
         [project_id]
       );
 
-      const invoiceDates = invoiceResult.rows.map(
-        (row) => row.invoice_date.toISOString().split("T")[0]
+      const logDates = dailyLogResult.rows.map(
+        (row) => row.log_date.toISOString().split("T")[0]
       );
       const missingDates = [];
 
@@ -1098,7 +1099,7 @@ const checkAndUpdateNotifications = async () => {
         if (isWeekend(date)) {
           continue;
         }
-        if (!invoiceDates.includes(formattedDate)) {
+        if (!logDates.includes(formattedDate)) {
           missingDates.push(formattedDate);
         }
       }
@@ -1107,33 +1108,27 @@ const checkAndUpdateNotifications = async () => {
       for (const missingDate of missingDates) {
         await db.query(
           "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
-          [1, missingDate, "Invoice missing for " + missingDate, project_id]
+          [1, missingDate, "Daily log missing for " + missingDate, project_id]
         );
       }
 
-      // Check for invoices where payment has not been received after 30 days
+      // Check for logs where payment has not been received after 30 days
       const now = new Date();
-      for (const invoice of invoiceResult.rows) {
-        console.log("Invoice amount ", invoice.amount);
-        if (invoice.amount == 0) {
+      for (const log of dailyLogResult.rows) {
+        if (log.hours == 0) {
           continue;
         }
-        if (!invoice.has_paid) {
-          const invoiceDate = new Date(invoice.invoice_date);
-          const diffDays = Math.floor(
-            (now - invoiceDate) / (1000 * 60 * 60 * 24)
-          );
+        if (!log.status_submitted) {
+          const logDate = new Date(log.log_date);
+          const diffDays = Math.floor((now - logDate) / (1000 * 60 * 60 * 24));
 
           if (diffDays > 30) {
-            console.log(
-              `Adding notification for overdue invoice on ${invoice.invoice_date}`
-            );
             await db.query(
               "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
               [
                 2,
-                invoice.invoice_date,
-                "Payment not received for invoice on " + invoice.invoice_date,
+                log.log_date,
+                "Payment not received for daily log on " + log.log_date,
                 project_id,
               ]
             );

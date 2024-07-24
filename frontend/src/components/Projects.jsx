@@ -404,6 +404,7 @@ function Projects() {
       <table className="table mt-3">
         <thead>
           <tr>
+            <th>ID</th>
             <th>Project Name</th>
             <th>Status</th>
             <th>Start</th>
@@ -422,12 +423,13 @@ function Projects() {
         <tbody>
           {projects.map((project) => (
             <tr key={project.project_id}>
+              <td>{project.project_id}</td>
               <td className="project-name">{project.project_name}</td>
               <td>{project.project_status === 1 ? "Ongoing" : "Complete"}</td>
               <td>{project.start_date}</td>
               <td>{project.end_date}</td>
               <td>{project.location}</td>
-              <td>{project.details}</td>
+              <td className="wider-col">{project.details}</td>
               <td>
                 {project.quotation_url && (
                   <a
@@ -491,7 +493,6 @@ function Projects() {
                     >
                       {project.end_date}
                     </button>
-                    <button className="btn btn-secondary">Yesterday</button>
                   </>
                 )}
                 {checkYesterdayTodayRender(project) === 3 && (
@@ -508,7 +509,6 @@ function Projects() {
                     >
                       {project.end_date}
                     </button>
-                    <button className="btn btn-secondary">Yesterday</button>
                   </>
                 )}
 
@@ -558,7 +558,6 @@ function Projects() {
                     >
                       {project.end_date}
                     </button>
-                    <button className="btn btn-secondary">Yesterday</button>
                   </>
                 )}
                 {checkYesterdayTodayRender(project) === 3 && (
@@ -573,7 +572,6 @@ function Projects() {
                     >
                       {project.end_date}
                     </button>
-                    <button className="btn btn-secondary">Yesterday</button>
                   </>
                 )}
                 <button onClick={() => navigateToExpenses(project, "View All")}>
