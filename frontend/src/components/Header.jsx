@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import GlobalClock from "./GlobalClock";
 
 const Header = () => {
-  const stateData = { isAuthenticated: true };
   return (
     <div className="navbar navbar-dark bg-dark">
       <img src="/otek-transparent.png" alt="Otek logo"></img>
@@ -13,9 +12,7 @@ const Header = () => {
           <Link to="/">Login</Link>
         </li>
         <li>
-          <Link to="/projects" state={stateData}>
-            Projects
-          </Link>
+          <Link to="/projects">Projects</Link>
         </li>
       </ul>
     </div>
