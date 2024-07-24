@@ -225,7 +225,6 @@ app.post("/dailyLogs", verifyToken, async (req, res) => {
       p.project_name, 
       COALESCE(STRING_AGG(e.name, ', '), '[No engineers]') AS engineer_names, 
       dl.status_submitted, 
-      dl.received_payment, 
       dl.hours, 
       dl.pdf_url,
       TO_CHAR(dl.date_submitted, 'YYYY-MM-DD') AS date_submitted
@@ -244,22 +243,22 @@ app.post("/dailyLogs", verifyToken, async (req, res) => {
   if (action === "Yesterday") {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
     params = [projectId, formattedYesterday];
   } else if (action === "Today") {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
     params = [projectId, formattedToday];
   } else if (action === "View All") {
     query =
       baseQuery +
-      `GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
+      `GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
     params = [projectId];
   } else if (action === "End Date" && endDate) {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.received_payment, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
     params = [projectId, endDate];
   } else {
     return res.status(400).send("Unknown action");
@@ -577,7 +576,6 @@ app.post(
     const {
       log_date,
       status_submitted,
-      received_payment,
       hours,
       pdf_url,
       daily_log_id,
@@ -587,13 +585,12 @@ app.post(
     try {
       const result = await db.query(
         `UPDATE daily_logs 
-       SET log_date = $1, status_submitted = $2, received_payment = $3, hours = $4, pdf_url = $5, date_submitted = $6
-       WHERE daily_log_id = $7 
+       SET log_date = $1, status_submitted = $2, hours = $3, pdf_url = $4, date_submitted = $5
+       WHERE daily_log_id = $6 
        RETURNING *`,
         [
           log_date,
           status_submitted,
-          received_payment,
           hours,
           pdf_url,
           date_submitted,
@@ -751,7 +748,6 @@ app.post(
       log_date,
       engineer_id,
       status_submitted,
-      received_payment,
       hours,
       pdf_url,
       date_submitted,
@@ -764,18 +760,16 @@ app.post(
         log_date,
         engineer_id,
         status_submitted,
-        received_payment,
         hours,
         pdf_url,
         date_submitted
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *`,
         [
           project_id,
           log_date,
           engineer_id,
           status_submitted,
-          received_payment,
           hours,
           pdf_url,
           date_submitted,
@@ -1112,23 +1106,34 @@ const checkAndUpdateNotifications = async () => {
         );
       }
 
-      // Check for logs where payment has not been received after 30 days
+      // Check for invoice expenses where payment has not been received after 30 days
+      const invoiceResult = await db.query(
+        `SELECT invoice_date, has_paid, amount FROM invoices WHERE project_id = $1`,
+        [project_id]
+      );
+      // Check for invoices where payment has not been received after 30 days
       const now = new Date();
-      for (const log of dailyLogResult.rows) {
-        if (log.hours == 0) {
+      for (const invoice of invoiceResult.rows) {
+        console.log("Invoice amount ", invoice.amount);
+        if (invoice.amount == 0) {
           continue;
         }
-        if (!log.status_submitted) {
-          const logDate = new Date(log.log_date);
-          const diffDays = Math.floor((now - logDate) / (1000 * 60 * 60 * 24));
+        if (!invoice.has_paid) {
+          const invoiceDate = new Date(invoice.invoice_date);
+          const diffDays = Math.floor(
+            (now - invoiceDate) / (1000 * 60 * 60 * 24)
+          );
 
           if (diffDays > 30) {
+            console.log(
+              `Adding notification for overdue invoice on ${invoice.invoice_date}`
+            );
             await db.query(
               "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
               [
                 2,
-                log.log_date,
-                "Payment not received for daily log on " + log.log_date,
+                invoice.invoice_date,
+                "Payment not received for invoice on " + invoice.invoice_date,
                 project_id,
               ]
             );
@@ -1136,7 +1141,6 @@ const checkAndUpdateNotifications = async () => {
         }
       }
     }
-
     console.log("Notifications refreshed.");
   } catch (error) {
     console.error("Error checking and updating notifications:", error);

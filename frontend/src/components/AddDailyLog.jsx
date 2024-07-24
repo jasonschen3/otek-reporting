@@ -10,7 +10,6 @@ const AddDailyLog = () => {
     engineer_id: "",
     status_submitted: "0",
     date_submitted: null,
-    received_payment: "0",
     hours: "",
     pdf_url: "",
   });
@@ -137,18 +136,6 @@ const AddDailyLog = () => {
           onChange={handleChange}
           className="form-control"
         />
-      </div>
-      <div className="form-group">
-        <label>Received Payment</label>
-        <select
-          name="received_payment"
-          value={newDailyLog.received_payment}
-          onChange={handleChange}
-          className="form-control"
-        >
-          <option value="1">Yes</option>
-          <option value="0">No</option>
-        </select>
       </div>
       <div className="form-group">
         <label>Hours</label>

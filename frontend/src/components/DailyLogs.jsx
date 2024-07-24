@@ -213,7 +213,6 @@ const DailyLogs = () => {
             <th>Engineer</th>
             <th>Submitted</th>
             <th>Date Submitted</th>
-            <th>Received Payment</th>
             <th>Hours</th>
             <th>PDF</th>
             <th>Actions</th>
@@ -240,7 +239,6 @@ const DailyLogs = () => {
                 </td>
                 <td>{log.status_submitted === "1" ? "Yes" : "No"}</td>
                 <td>{log.date_submitted || ""}</td>
-                <td>{log.received_payment === "1" ? "Yes" : "No"}</td>
                 <td>{log.hours}</td>
                 <td>
                   {log.pdf_url && (
@@ -312,18 +310,6 @@ const DailyLogs = () => {
                 onChange={handleChange}
                 className="form-control"
               />
-            </div>
-            <div className="form-group">
-              <label>Received Payment</label>
-              <select
-                name="received_payment"
-                value={editDailyLog.received_payment}
-                onChange={handleChange}
-                className="form-control"
-              >
-                <option value="1">Yes</option>
-                <option value="0">No</option>
-              </select>
             </div>
             <div className="form-group">
               <label>Hours</label>
