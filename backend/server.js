@@ -1140,6 +1140,27 @@ const checkAndUpdateNotifications = async () => {
           }
         }
       }
+      // Noti type 3: Missing invoice, 30 days an invoice remind after 30
+      // Calculate the number of invoices required based on the project duration
+      const invoiceInterval = 30; // 30 days per invoice
+      const reqNumberOfInvoices = Math.ceil(totalDays / invoiceInterval);
+
+      const currInvoices = (
+        await db.query("SELECT internal_id FROM invoices WHERE project_id=$1", [
+          project_id,
+        ])
+      ).rows.length;
+
+      const missingInvoices = reqNumberOfInvoices - currInvoices;
+
+      for (let i = 0; i < missingInvoices; i++) {
+        const currDate = new Date();
+
+        await db.query(
+          "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
+          [3, currDate, `Invoice required`, project_id]
+        );
+      }
     }
     console.log("Notifications refreshed.");
   } catch (error) {

@@ -145,9 +145,16 @@ function Projects() {
       const type2Count = response.data.filter(
         (noti) => noti.noti_type === 2
       ).length;
+      const type3Count = response.data.filter(
+        (noti) => noti.noti_type === 3
+      ).length;
       setNotificationsCount((prev) => ({
         ...prev,
-        [projectId]: { type1: type1Count, type2: type2Count },
+        [projectId]: {
+          type1: type1Count,
+          type2: type2Count,
+          type3: type3Count,
+        },
       }));
     } catch (error) {
       console.error("Error fetching notifications count:", error);
@@ -603,6 +610,9 @@ function Projects() {
                       <div>{`${
                         notificationsCount[project.project_id].type2
                       } missing expenses`}</div>
+                      <div>{`${
+                        notificationsCount[project.project_id].type3
+                      } missing invoices`}</div>
                     </>
                   ) : (
                     ""
@@ -700,7 +710,7 @@ function Projects() {
               />
             </div>
             <div className="form-group">
-              <label>Quotation URL</label> {/* Add new field */}
+              <label>Quotation URL</label>
               <input
                 type="text"
                 name="quotation_url"
