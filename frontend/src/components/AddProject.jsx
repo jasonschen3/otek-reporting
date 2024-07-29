@@ -128,7 +128,9 @@ function AddProject() {
           required
         >
           <option value={1}>Ongoing</option>
-          <option value={0}>Complete</option>
+          <option value={2}>Completed</option>
+          <option value={3}>Bill Submitted</option>
+          <option value={4}>To Be Submitted</option>
         </select>
       </div>
       <div className="form-group">

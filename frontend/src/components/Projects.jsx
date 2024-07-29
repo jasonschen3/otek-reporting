@@ -41,6 +41,22 @@ function checkYesterdayTodayRender(project) {
   }
   return 1;
 }
+const getProjectStatus = (status) => {
+  switch (status) {
+    case 1:
+      return "Ongoing";
+    case 2:
+      return "Completed";
+    case 3:
+      return "Bill Submitted";
+    case 4:
+      return "To Be Submitted";
+    case 5:
+      return "All";
+    default:
+      return "Unknown";
+  }
+};
 
 function Projects() {
   const [projects, setProjects] = useState([]);
@@ -52,6 +68,7 @@ function Projects() {
   const [latestInvoiceDates, setLatestInvoiceDates] = useState({});
   const [permissionLevel, setPermissionLevel] = useState(0);
   const [companies, setCompanies] = useState([]);
+  const [displayStatus, setDisplayStatus] = useState(1); // Default to Ongoing
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -63,23 +80,13 @@ function Projects() {
     }
     const decoded = jwtDecode(token);
     setPermissionLevel(decoded.permission_level);
+
     axios
-      .post(
-        `${BACKEND_IP}/updateProjectDisplay`,
-        { ongoing: true, completed: false },
-        {
-          headers: {
-            "access-token": token,
-          },
-        }
-      )
-      .then((res) =>
-        axios.get(`${BACKEND_IP}/projects`, {
-          headers: {
-            "access-token": token,
-          },
-        })
-      )
+      .get(`${BACKEND_IP}/projects`, {
+        headers: {
+          "access-token": token,
+        },
+      })
       .then((res) => {
         setProjects(res.data);
         return axios.all([
@@ -132,6 +139,7 @@ function Projects() {
           navigate("/login");
         }
       });
+
     const fetchCompanies = async () => {
       try {
         const res = await axios.get(`${BACKEND_IP}/allCompanies`, {
@@ -143,7 +151,7 @@ function Projects() {
       }
     };
     fetchCompanies();
-  }, [navigate]);
+  }, [navigate, token]);
 
   const fetchNotificationsCount = async (projectId) => {
     try {
@@ -239,68 +247,58 @@ function Projects() {
     setEditProject(null);
   };
 
-  const handleUpdateProjectDisplay = async (event) => {
-    event.preventDefault();
-    const ongoing = document.getElementById("ongoingCheckbox").checked;
-    const completed = document.getElementById("completedCheckbox").checked;
+  const handleUpdateProjectDisplay = async (e) => {
+    e.preventDefault();
+    console.log(displayStatus, "CURRENT DISPLAY SELECTED");
 
     try {
       const response = await axios.post(
         `${BACKEND_IP}/updateProjectDisplay`,
-        { ongoing: ongoing, completed: completed },
+        { status: displayStatus },
         {
           headers: { "access-token": token },
         }
       );
+      setDisplayingMessage(getProjectStatus(displayStatus));
+    } catch (error) {
+      console.error("Error updating project display status:", error);
+    }
+    // Yesterday today display
+    try {
+      const projectsResponse = await axios.get(`${BACKEND_IP}/projects`, {
+        headers: { "access-token": token },
+      });
 
-      if (response.status === 200) {
-        if (ongoing && completed) {
-          setDisplayingMessage("All");
-        } else if (ongoing) {
-          setDisplayingMessage("Ongoing");
-        } else if (completed) {
-          setDisplayingMessage("Completed");
-        } else {
-          setDisplayingMessage("Nothing");
-        }
+      setProjects(projectsResponse.data);
 
-        const projectsResponse = await axios.get(`${BACKEND_IP}/projects`, {
+      const [entriesRes, expensesRes] = await axios.all([
+        axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=false`, {
           headers: { "access-token": token },
-        });
+        }),
+        axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=true`, {
+          headers: { "access-token": token },
+        }),
+      ]);
 
-        setProjects(projectsResponse.data);
+      const entriesStatusData = entriesRes.data.reduce((acc, status) => {
+        acc[status.project_id] = {
+          today: status.today,
+          yesterday: status.yesterday,
+          end_date: status.end_date_status,
+        };
+        return acc;
+      }, {});
+      setEntriesStatus(entriesStatusData);
 
-        const [entriesRes, expensesRes] = await axios.all([
-          axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=false`, {
-            headers: { "access-token": token },
-          }),
-          axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=true`, {
-            headers: { "access-token": token },
-          }),
-        ]);
-
-        const entriesStatusData = entriesRes.data.reduce((acc, status) => {
-          acc[status.project_id] = {
-            today: status.today,
-            yesterday: status.yesterday,
-            end_date: status.end_date_status,
-          };
-          return acc;
-        }, {});
-        setEntriesStatus(entriesStatusData);
-
-        const expensesStatusData = expensesRes.data.reduce((acc, status) => {
-          acc[status.project_id] = {
-            today: status.today,
-            yesterday: status.yesterday,
-            end_date: status.end_date_status,
-          };
-          return acc;
-        }, {});
-        setExpensesStatus(expensesStatusData);
-      } else {
-        console.error("Failed to update project display");
-      }
+      const expensesStatusData = expensesRes.data.reduce((acc, status) => {
+        acc[status.project_id] = {
+          today: status.today,
+          yesterday: status.yesterday,
+          end_date: status.end_date_status,
+        };
+        return acc;
+      }, {});
+      setExpensesStatus(expensesStatusData);
     } catch (error) {
       console.error("Error updating project display:", error);
     }
@@ -390,24 +388,27 @@ function Projects() {
       <div className="subheading">
         <div>
           <form onSubmit={handleUpdateProjectDisplay}>
-            <label>
-              <input
-                type="checkbox"
-                name="ongoing"
-                id="ongoingCheckbox"
-                defaultChecked
-              />
-              Ongoing
-            </label>
-            <label>
-              <input type="checkbox" name="completed" id="completedCheckbox" />
-              Completed
-            </label>
+            <div className="form-group">
+              <label htmlFor="projectStatusSelect">Select Project Status</label>
+              <select
+                id="projectStatusSelect"
+                value={displayStatus}
+                /* PARSE INT FOR SELECTING INT */
+                onChange={(e) => setDisplayStatus(parseInt(e.target.value))}
+                className="form-control"
+              >
+                <option value={1}>Ongoing</option>
+                <option value={2}>Completed</option>
+                <option value={3}>Bill Submitted</option>
+                <option value={4}>To Be Submitted</option>
+                <option value={5}>All</option>
+              </select>
+            </div>
             <button type="submit" className="btn btn-primary">
               Display
             </button>
-            <div>Currently Displaying: {displayingMessage}</div>
           </form>
+          <div>Currently Displaying: {displayingMessage}</div>
         </div>
         <div>
           {permissionLevel >= 2 && (
@@ -473,7 +474,7 @@ function Projects() {
           {projects.map((project) => (
             <tr key={project.project_id}>
               <td className="project-name">{project.project_name}</td>
-              <td>{project.project_status === 1 ? "Ongoing" : "Complete"}</td>
+              <td>{getProjectStatus(project.project_status)}</td>
               <td>{project.start_date}</td>
               <td>{project.end_date}</td>
               <td>{project.location}</td>
@@ -722,7 +723,9 @@ function Projects() {
                 className="form-control"
               >
                 <option value={1}>Ongoing</option>
-                <option value={0}>Complete</option>
+                <option value={2}>Completed</option>
+                <option value={3}>Bill Submitted</option>
+                <option value={4}>To Be Submitted</option>
               </select>
             </div>
             <div className="form-group">

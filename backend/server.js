@@ -26,7 +26,7 @@ const db = new pg.Client({
 db.connect();
 
 let projectsInfo = []; // arr of json
-let projectDisplayStatus = 1; // 0 1 2 3, display none, display ongoing, display completed, display all
+let projectDisplayStatus = 1; // 1 2 3 4 5, display ongoing, display completed, display bill-submitted, to be submitted, display all
 
 const secretKey = process.env.SESSION_KEY;
 
@@ -108,44 +108,48 @@ async function updateProjectInfo() {
   let currProjectsInfo = null;
 
   const query = `
-  SELECT 
-    p.project_id, 
-    p.project_name, 
-    p.project_status, 
-    TO_CHAR(p.start_date, 'YYYY-MM-DD') AS start_date, 
-    TO_CHAR(p.end_date, 'YYYY-MM-DD') AS end_date, 
-    COALESCE(STRING_AGG(e.name, ', '), '') AS engineer_names, 
-    p.details, 
-    p.location,
-    p.quotation_url,
-    p.purchase_url,
-    p.amount,
-    p.contract_id,
-    p.otek_invoice,
-    p.company_name
-  FROM 
-    projects p 
-  LEFT JOIN 
-    projects_assign_engineers pae ON p.project_id = pae.project_id 
-  LEFT JOIN 
-    engineers e ON pae.engineer_id = e.engineer_id 
-  WHERE 
-    p.project_status = $1 
-  GROUP BY 
-    p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location, p.quotation_url, p.purchase_url, p.amount, p.contract_id, p.otek_invoice
-  ORDER BY 
-    p.start_date DESC, p.project_name;`;
+    SELECT 
+      p.project_id, 
+      p.project_name, 
+      p.project_status, 
+      TO_CHAR(p.start_date, 'YYYY-MM-DD') AS start_date, 
+      TO_CHAR(p.end_date, 'YYYY-MM-DD') AS end_date, 
+      COALESCE(STRING_AGG(e.name, ', '), '') AS engineer_names, 
+      p.details, 
+      p.location,
+      p.quotation_url,
+      p.purchase_url,
+      p.amount,
+      p.contract_id,
+      p.otek_invoice,
+      p.company_name
+    FROM 
+      projects p 
+    LEFT JOIN 
+      projects_assign_engineers pae ON p.project_id = pae.project_id 
+    LEFT JOIN 
+      engineers e ON pae.engineer_id = e.engineer_id 
+    WHERE 
+      p.project_status = $1 
+    GROUP BY 
+      p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location, p.quotation_url, p.purchase_url, p.amount, p.contract_id, p.otek_invoice, p.company_name
+    ORDER BY 
+      p.start_date DESC, p.project_name;
+  `;
 
   if (projectDisplayStatus === 1) {
     // ongoing projects
     currProjectsInfo = await db.query(query, [1]);
-  } else if (projectDisplayStatus === 0) {
-    // no projects (empty query)
-    currProjectsInfo = { rows: [] };
   } else if (projectDisplayStatus === 2) {
     // finished projects
-    currProjectsInfo = await db.query(query, [0]);
-  } else {
+    currProjectsInfo = await db.query(query, [2]);
+  } else if (projectDisplayStatus === 3) {
+    // bill submitted projects
+    currProjectsInfo = await db.query(query, [3]);
+  } else if (projectDisplayStatus === 4) {
+    // to be submitted projects
+    currProjectsInfo = await db.query(query, [4]);
+  } else if (projectDisplayStatus === 5) {
     // all projects
     currProjectsInfo = await db.query(`
       SELECT 
@@ -170,9 +174,10 @@ async function updateProjectInfo() {
       LEFT JOIN 
         engineers e ON pae.engineer_id = e.engineer_id 
       GROUP BY 
-        p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location, p.quotation_url, p.purchase_url, p.amount, p.contract_id, p.otek_invoice
+        p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location, p.quotation_url, p.purchase_url, p.amount, p.contract_id, p.otek_invoice, p.company_name
       ORDER BY 
-        p.project_id;`);
+        p.start_date DESC, p.project_name;
+    `);
   }
 
   projectsInfo = currProjectsInfo.rows;
@@ -366,46 +371,12 @@ app.post("/expenses", verifyToken, async (req, res) => {
   }
 });
 
-app.post(
-  "/editProjectDisplay",
-  verifyToken,
-  checkPermissionLevel(2),
-  async (req, res) => {
-    // console.log("Update posted");
-    const { ongoing, completed } = req.body;
-
-    console.log("Ongoing:", ongoing);
-    console.log("Completed:", completed);
-
-    if (ongoing && completed) {
-      projectDisplayStatus = 3; // display all
-    } else if (ongoing) {
-      projectDisplayStatus = 1; // display ongoing
-    } else if (completed) {
-      projectDisplayStatus = 2; // display completed
-    } else {
-      projectDisplayStatus = 0; // display none
-    }
-
-    res.redirect("/projects");
-  }
-);
-
-// Toggle what to display based on status
+// // Toggle what to display based on status
 app.post("/updateProjectDisplay", verifyToken, async (req, res) => {
-  // console.log("Update posted");
-  const ongoing = req.body.ongoing;
-  const completed = req.body.completed;
-  if (ongoing && completed) {
-    projectDisplayStatus = 3; // display all
-  } else if (ongoing) {
-    projectDisplayStatus = 1; // display ongoing
-  } else if (completed) {
-    projectDisplayStatus = 2; // display completed
-  } else {
-    projectDisplayStatus = 0; // display none
-  }
+  const { status } = req.body;
+  // console.log("Received status ", status);
 
+  projectDisplayStatus = status;
   res.redirect("/projects");
 });
 
@@ -1032,6 +1003,7 @@ const hasEntriesOrExpensesOnDate = async (projectId, date, checkExpenses) => {
   return result.rows[0].exists;
 };
 
+// Tells status of yesterday and today of either expenses or dl
 app.get("/projectEntriesStatus", verifyToken, async (req, res) => {
   const { checkExpenses } = req.query;
   const today = new Date();
@@ -1185,9 +1157,6 @@ const checkAndUpdateNotifications = async () => {
           );
 
           if (diffDays > 30) {
-            console.log(
-              `Adding notification for overdue invoice on ${invoice.invoice_date}`
-            );
             await db.query(
               "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
               [
@@ -1222,7 +1191,7 @@ const checkAndUpdateNotifications = async () => {
         );
       }
     }
-    console.log("Notifications refreshed.");
+    console.log("Notifications refreshed");
   } catch (error) {
     console.error("Error checking and updating notifications:", error);
   }
@@ -1237,7 +1206,7 @@ checkAndUpdateNotifications();
 app.post("/refreshAllNotifications", verifyToken, async (req, res) => {
   try {
     await checkAndUpdateNotifications();
-    console.log("All notifications refreshed.");
+    console.log("All notifications refreshed");
     res.json({ message: "All notifications refreshed" });
   } catch (err) {
     console.log("Error refreshing notifications ", err);
