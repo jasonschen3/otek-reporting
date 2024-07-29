@@ -34,9 +34,9 @@ function generateToken(user) {
   const payload = {
     id: user.id,
     username: user.username,
-    permission_level: user.permission_level, // Add user permissions here
+    permission_level: user.permission_level,
   };
-  const options = { expiresIn: "2h" }; // Set token expiration time
+  const options = { expiresIn: "2h" };
   console.log("generated");
   return jwt.sign(payload, secretKey, options);
 }
@@ -104,7 +104,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-async function updateCompanyInfo() {
+async function updateProjectInfo() {
   let currProjectsInfo = null;
 
   const query = `
@@ -117,7 +117,12 @@ async function updateCompanyInfo() {
     COALESCE(STRING_AGG(e.name, ', '), '') AS engineer_names, 
     p.details, 
     p.location,
-    p.quotation_urL
+    p.quotation_url,
+    p.purchase_url,
+    p.amount,
+    p.contract_id,
+    p.otek_invoice,
+    p.company_name
   FROM 
     projects p 
   LEFT JOIN 
@@ -127,9 +132,9 @@ async function updateCompanyInfo() {
   WHERE 
     p.project_status = $1 
   GROUP BY 
-    p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location, p.quotation_url
+    p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location, p.quotation_url, p.purchase_url, p.amount, p.contract_id, p.otek_invoice
   ORDER BY 
-    p.project_id;`;
+    p.start_date DESC, p.project_name;`;
 
   if (projectDisplayStatus === 1) {
     // ongoing projects
@@ -151,7 +156,13 @@ async function updateCompanyInfo() {
         TO_CHAR(p.end_date, 'YYYY-MM-DD') AS end_date, 
         COALESCE(STRING_AGG(e.name, ', '), '') AS engineer_names, 
         p.details, 
-        p.location
+        p.location,
+        p.quotation_url,
+        p.purchase_url,
+        p.amount,
+        p.contract_id,
+        p.otek_invoice,
+        p.company_name
       FROM 
         projects p 
       LEFT JOIN 
@@ -159,7 +170,7 @@ async function updateCompanyInfo() {
       LEFT JOIN 
         engineers e ON pae.engineer_id = e.engineer_id 
       GROUP BY 
-        p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location
+        p.project_id, p.project_name, p.start_date, p.end_date, p.details, p.location, p.quotation_url, p.purchase_url, p.amount, p.contract_id, p.otek_invoice
       ORDER BY 
         p.project_id;`);
   }
@@ -181,7 +192,7 @@ app.get("/", async (req, res) => {
 
 app.get("/projects", verifyToken, async (req, res) => {
   try {
-    await updateCompanyInfo();
+    await updateProjectInfo();
     res.json(projectsInfo);
   } catch (error) {
     console.error("Error updating company info:", error);
@@ -243,22 +254,22 @@ app.post("/dailyLogs", verifyToken, async (req, res) => {
   if (action === "Yesterday") {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.log_date;`;
     params = [projectId, formattedYesterday];
   } else if (action === "Today") {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.log_date;`;
     params = [projectId, formattedToday];
   } else if (action === "View All") {
     query =
       baseQuery +
-      `GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
+      `GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.log_date;`;
     params = [projectId];
   } else if (action === "End Date" && endDate) {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.daily_log_id;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.log_date;`;
     params = [projectId, endDate];
   } else {
     return res.status(400).send("Unknown action");
@@ -326,21 +337,21 @@ app.post("/expenses", verifyToken, async (req, res) => {
 
   if (action === "Yesterday") {
     currExpensesInfo = await db.query(
-      baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_id",
+      baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_date",
       [projectId, formattedYesterday]
     );
   } else if (action === "Today") {
     currExpensesInfo = await db.query(
-      baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_id",
+      baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_date",
       [projectId, formattedToday]
     );
   } else if (action === "View All") {
-    currExpensesInfo = await db.query(baseQuery + "ORDER BY e.expense_id", [
+    currExpensesInfo = await db.query(baseQuery + "ORDER BY e.expense_date", [
       projectId,
     ]);
   } else if (action === "End Date" && endDate) {
     currExpensesInfo = await db.query(
-      baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_id",
+      baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_date",
       [projectId, endDate]
     );
   } else {
@@ -413,7 +424,7 @@ app.post(
       );
 
       if (checkResult.rows.length > 0) {
-        return res.status(409).json({ message: "Username already exists" }); // 409 Conflict
+        return res.status(409).json({ message: "Username already exists" });
       }
 
       bcrypt.hash(password, saltRounds, async (err, hash) => {
@@ -430,7 +441,7 @@ app.post(
         if (result.rows.length > 0) {
           res.status(201).json({ message: "Registration successful" }); // 201 Created
         } else {
-          res.status(500).json({ message: "Registration failed" }); // 500 Internal Server Error
+          res.status(500).json({ message: "Registration failed" });
         }
       });
     } catch (err) {
@@ -440,7 +451,6 @@ app.post(
   }
 );
 
-// Edit functionality
 app.post(
   "/editProject",
   verifyToken,
@@ -455,11 +465,31 @@ app.post(
       details,
       location,
       quotation_url,
+      purchase_url,
+      amount,
+      contract_id,
+      otek_invoice,
+      company_name,
     } = req.body;
 
     try {
       const result = await db.query(
-        `UPDATE projects SET project_name = $1, project_status = $2, start_date = $3, end_date = $4, details = $5, location = $6 , quotation_url=$7 WHERE project_id = $8 RETURNING *`,
+        `UPDATE projects SET 
+          project_name = $1, 
+          project_status = $2, 
+          start_date = $3, 
+          end_date = $4, 
+          details = $5, 
+          location = $6, 
+          quotation_url = $7, 
+          purchase_url = $8, 
+          amount = $9, 
+          contract_id = $10, 
+          otek_invoice = $11, 
+          company_name = $12
+        WHERE 
+          project_id = $13 
+        RETURNING *`,
         [
           project_name,
           project_status,
@@ -468,10 +498,14 @@ app.post(
           details,
           location,
           quotation_url,
+          purchase_url,
+          amount,
+          contract_id,
+          otek_invoice,
+          company_name,
           project_id,
         ]
       );
-      // console.log(result.rows[0]);
       res.json(result.rows[0]);
     } catch (error) {
       console.error("Error updating project:", error);
@@ -641,6 +675,38 @@ app.get("/allEngineers", verifyToken, async (req, res) => {
   }
 });
 
+app.get("/allCompanies", verifyToken, async (req, res) => {
+  try {
+    const result = await db.query(
+      "SELECT * FROM companies ORDER BY company_name ASC"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.log("Error getting company names ", err);
+  }
+});
+
+app.post(
+  "/addCompany",
+  verifyToken,
+  checkPermissionLevel(2),
+  async (req, res) => {
+    const { company_name } = req.body;
+
+    try {
+      const result = await db.query(
+        `INSERT INTO companies (company_name) VALUES ($1) RETURNING *`,
+        [company_name]
+      );
+
+      res.status(200).json(result.rows[0]);
+    } catch (error) {
+      console.error("Error adding company:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
+
 app.get("/engineers", verifyToken, async (req, res) => {
   const { project_id } = req.query;
 
@@ -679,64 +745,59 @@ app.get("/dailyLogs", verifyToken, async (req, res) => {
   }
 });
 
-app.post(
-  "/addProject",
-  verifyToken,
-  checkPermissionLevel(2),
-  async (req, res) => {
-    let {
-      project_name,
-      project_status,
-      start_date,
-      end_date,
-      details,
-      location,
-      engineer_ids,
-      quotation_url,
-    } = req.body;
+app.post("/addProject", verifyToken, async (req, res) => {
+  const {
+    project_name,
+    project_status,
+    start_date,
+    end_date,
+    details,
+    location,
+    quotation_url,
+    purchase_url,
+    engineer_ids,
+    company_name,
+    amount,
+    contract_id,
+    otek_invoice,
+  } = req.body;
+  try {
+    const result = await db.query(
+      `INSERT INTO projects (project_name, project_status, start_date, end_date, details, location, quotation_url, purchase_url, company_name, amount, contract_id, otek_invoice) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      [
+        project_name,
+        project_status,
+        start_date,
+        end_date,
+        details,
+        location,
+        quotation_url,
+        purchase_url,
+        company_name,
+        amount,
+        contract_id,
+        otek_invoice,
+      ]
+    );
 
-    try {
-      // Error if date is "" instead of null
-      start_date = start_date === "" ? null : start_date;
-      end_date = end_date === "" ? null : end_date;
+    const newProject = result.rows[0];
 
-      const newProjectResult = await db.query(
-        `INSERT INTO projects (project_name, project_status, start_date, end_date, details, location, quotation_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
-        [
-          project_name,
-          project_status,
-          start_date,
-          end_date,
-          details,
-          location,
-          quotation_url,
-        ]
+    const engineerAssignments = engineer_ids.map((engineer_id) => {
+      return db.query(
+        `INSERT INTO projects_assign_engineers (project_id, engineer_id) VALUES ($1, $2)`,
+        [newProject.project_id, engineer_id]
       );
+    });
 
-      const newProject = newProjectResult.rows[0];
-      console.log(newProject);
+    await Promise.all(engineerAssignments);
 
-      // Insert the engineer assignments into the projects_assign_engineers table
-      const engineerAssignments = engineer_ids.map((engineer_id) => {
-        return db.query(
-          `INSERT INTO projects_assign_engineers (project_id, engineer_id)
-         VALUES ($1, $2)`,
-          [newProject.project_id, engineer_id]
-        );
-      });
-
-      // Research this
-      await Promise.all(engineerAssignments);
-
-      res.status(200).json(newProject);
-    } catch (error) {
-      console.error("Error adding project:", error);
-      res.status(500).send("Error adding project");
-    }
+    res.status(200).json(newProject);
+  } catch (error) {
+    console.error("Error adding project:", error);
+    res.status(500).json({ message: "Server error" });
   }
-);
+});
 
 app.post(
   "/addDailyLog",
@@ -1114,7 +1175,6 @@ const checkAndUpdateNotifications = async () => {
       // Check for invoices where payment has not been received after 30 days
       const now = new Date();
       for (const invoice of invoiceResult.rows) {
-        console.log("Invoice amount ", invoice.amount);
         if (invoice.amount == 0) {
           continue;
         }
@@ -1171,11 +1231,21 @@ const checkAndUpdateNotifications = async () => {
 // Run the timer function every hour
 setInterval(checkAndUpdateNotifications, 60 * 60 * 1000);
 
-// Every min
-// setInterval(checkAndUpdateNotifications, 1000 * 60);
-
 // Initial call to start immediately
 checkAndUpdateNotifications();
+
+app.post("/refreshAllNotifications", verifyToken, async (req, res) => {
+  try {
+    await checkAndUpdateNotifications();
+    console.log("All notifications refreshed.");
+    res.json({ message: "All notifications refreshed" });
+  } catch (err) {
+    console.log("Error refreshing notifications ", err);
+    res
+      .status(500)
+      .json({ message: "Error refreshing notifications", error: err });
+  }
+});
 
 app.post("/updateNotifications", verifyToken, async (req, res) => {
   try {

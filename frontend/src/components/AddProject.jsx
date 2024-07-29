@@ -6,16 +6,22 @@ import { BACKEND_IP } from "../constants";
 function AddProject() {
   const [message, setMessage] = useState("");
   const [newProject, setNewProject] = useState({
-    project_name: "",
+    project_name: null,
     project_status: 1,
-    start_date: "",
-    end_date: "",
-    details: "",
-    location: "",
-    quotation_url: "", // Added field
+    start_date: null,
+    end_date: null,
+    details: null,
+    location: null,
+    quotation_url: null,
+    purchase_url: null,
     engineer_ids: [],
+    company_name: null,
+    amount: null,
+    contract_id: null,
+    otek_invoice: null,
   });
   const [engineers, setEngineers] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const nav = useNavigate();
   const token = localStorage.getItem("token");
 
@@ -24,9 +30,21 @@ function AddProject() {
       nav("/unauthorized");
       return;
     }
+
+    const fetchCompanies = async () => {
+      try {
+        const res = await axios.get(`${BACKEND_IP}/allCompanies`, {
+          headers: { "access-token": token },
+        });
+        setCompanies(res.data);
+      } catch (error) {
+        console.error("There was an error fetching the companies data", error);
+      }
+    };
+
     const fetchEngineers = async () => {
       try {
-        const res = await axios.get(`${BACKEND_IP}/engineers`, {
+        const res = await axios.get(`${BACKEND_IP}/allEngineers`, {
           headers: { "access-token": token },
         });
         setEngineers(res.data);
@@ -35,8 +53,9 @@ function AddProject() {
       }
     };
 
+    fetchCompanies();
     fetchEngineers();
-  }, []); // Empty dependency array ensures this runs only once
+  }, [token, nav]);
 
   const handleNewProjectChange = (e) => {
     const { name, value } = e.target;
@@ -71,22 +90,12 @@ function AddProject() {
         }
       );
       if (response.status === 200) {
-        setNewProject({
-          project_name: "",
-          project_status: 1,
-          start_date: "",
-          end_date: "",
-          details: "",
-          location: "",
-          quotation_url: "", // Reset field
-          engineer_ids: [],
-        });
         nav(-1);
       } else {
         setMessage("Failed to add project");
       }
     } catch (error) {
-      setMessage(error.response.data.message);
+      setMessage(error.response?.data?.message || "Error adding project");
       console.error("Error adding project:", error);
     }
   };
@@ -143,7 +152,7 @@ function AddProject() {
         />
       </div>
       <div className="form-group">
-        <label>Details</label>
+        <label>Notes</label>
         <input
           type="text"
           name="details"
@@ -171,6 +180,62 @@ function AddProject() {
           onChange={handleNewProjectChange}
           className="form-control"
         />
+      </div>
+      <div className="form-group">
+        <label>Purchase URL</label>
+        <input
+          type="text"
+          name="purchase_url"
+          value={newProject.purchase_url}
+          onChange={handleNewProjectChange}
+          className="form-control"
+        />
+      </div>
+      <div className="form-group">
+        <label>Amount</label>
+        <input
+          type="number"
+          name="amount"
+          value={newProject.amount}
+          onChange={handleNewProjectChange}
+          className="form-control"
+        />
+      </div>
+      <div className="form-group">
+        <label>Contract ID</label>
+        <input
+          type="text"
+          name="contract_id"
+          value={newProject.contract_id}
+          onChange={handleNewProjectChange}
+          className="form-control"
+        />
+      </div>
+      <div className="form-group">
+        <label>Otek Invoice</label>
+        <input
+          type="text"
+          name="otek_invoice"
+          value={newProject.otek_invoice}
+          onChange={handleNewProjectChange}
+          className="form-control"
+        />
+      </div>
+      <div className="form-group">
+        <label>Company</label>
+        <select
+          name="company_name"
+          value={newProject.company_name}
+          onChange={handleNewProjectChange}
+          className="form-control"
+        >
+          <option value={null}>Select a company</option>
+          {companies.map((company) => (
+            <option key={company.company_id} value={company.company_name}>
+              {company.company_name}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="form-group">
         <label>Engineers</label>

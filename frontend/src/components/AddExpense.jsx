@@ -7,17 +7,17 @@ import { BACKEND_IP } from "../constants";
 function AddExpense() {
   const [message, setMessage] = useState("");
   const [newExpense, setNewExpense] = useState({
-    expense_date: "",
-    expense_type: "",
-    expense_details: "",
-    amount: "",
-    daily_log_id: "",
-    engineer_id: "",
+    expense_date: null,
+    expense_type: null,
+    expense_details: null,
+    amount: null,
+    daily_log_id: null,
+    engineer_id: null,
     is_billable: false,
     status1: false,
     status2: false,
     status3: false,
-    pdf_url: "",
+    pdf_url: null,
   });
   const [engineers, setEngineers] = useState([]);
   const [dailyLogs, setDailyLogs] = useState([]);
@@ -107,19 +107,6 @@ function AddExpense() {
         }
       );
       if (response.status === 200) {
-        setNewExpense({
-          expense_date: "",
-          expense_type: "",
-          expense_details: "",
-          amount: "",
-          daily_log_id: "",
-          engineer_id: "",
-          is_billable: false,
-          status1: false,
-          status2: false,
-          status3: false,
-          pdf_url: "",
-        });
         nav(-1);
       } else {
         setMessage("Failed to add expense");

@@ -51,6 +51,7 @@ function Projects() {
   const [notificationsCount, setNotificationsCount] = useState({});
   const [latestInvoiceDates, setLatestInvoiceDates] = useState({});
   const [permissionLevel, setPermissionLevel] = useState(0);
+  const [companies, setCompanies] = useState([]);
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -109,7 +110,7 @@ function Projects() {
             acc[status.project_id] = {
               today: status.today,
               yesterday: status.yesterday,
-              end_date: status.end_date_status, // Include end_date status here
+              end_date: status.end_date_status,
             };
             return acc;
           }, {});
@@ -131,6 +132,17 @@ function Projects() {
           navigate("/login");
         }
       });
+    const fetchCompanies = async () => {
+      try {
+        const res = await axios.get(`${BACKEND_IP}/allCompanies`, {
+          headers: { "access-token": token },
+        });
+        setCompanies(res.data);
+      } catch (error) {
+        console.error("There was an error fetching the companies data", error);
+      }
+    };
+    fetchCompanies();
   }, [navigate]);
 
   const fetchNotificationsCount = async (projectId) => {
@@ -158,6 +170,18 @@ function Projects() {
       }));
     } catch (error) {
       console.error("Error fetching notifications count:", error);
+    }
+  };
+
+  const handleRefreshAll = async () => {
+    try {
+      await axios.post(`${BACKEND_IP}/refreshAllNotifications`, null, {
+        headers: { "access-token": token },
+      });
+      console.log("Refreshed");
+      window.location.reload();
+    } catch (error) {
+      console.log("Error refreshing all notifications ", error);
     }
   };
 
@@ -259,7 +283,7 @@ function Projects() {
           acc[status.project_id] = {
             today: status.today,
             yesterday: status.yesterday,
-            end_date: status.end_date_status, // Include end_date status here
+            end_date: status.end_date_status,
           };
           return acc;
         }, {});
@@ -269,7 +293,7 @@ function Projects() {
           acc[status.project_id] = {
             today: status.today,
             yesterday: status.yesterday,
-            end_date: status.end_date_status, // Include end_date status here
+            end_date: status.end_date_status,
           };
           return acc;
         }, {});
@@ -318,6 +342,10 @@ function Projects() {
     navigate("/register");
   };
 
+  const navigateToAddCompany = () => {
+    navigate("/addCompany");
+  };
+
   const handleDeleteClick = async (projectId) => {
     const isConfirmed = window.confirm(
       "Are you sure you want to delete this project?"
@@ -349,10 +377,6 @@ function Projects() {
       }
     }
   };
-  const formatDateString = (date) => {
-    const options = { year: "numeric", month: "2-digit", day: "2-digit" };
-    return date.toLocaleDateString(undefined, options);
-  };
 
   useEffect(() => {
     projects.forEach((project) => {
@@ -364,25 +388,27 @@ function Projects() {
     <div className="project-container mt-5">
       <h1>Projects Report</h1>
       <div className="subheading">
-        <form onSubmit={handleUpdateProjectDisplay}>
-          <label>
-            <input
-              type="checkbox"
-              name="ongoing"
-              id="ongoingCheckbox"
-              defaultChecked
-            />
-            Ongoing
-          </label>
-          <label>
-            <input type="checkbox" name="completed" id="completedCheckbox" />
-            Completed
-          </label>
-          <button type="submit" className="btn btn-primary">
-            Display
-          </button>
-          <div>Currently Displaying: {displayingMessage}</div>
-        </form>
+        <div>
+          <form onSubmit={handleUpdateProjectDisplay}>
+            <label>
+              <input
+                type="checkbox"
+                name="ongoing"
+                id="ongoingCheckbox"
+                defaultChecked
+              />
+              Ongoing
+            </label>
+            <label>
+              <input type="checkbox" name="completed" id="completedCheckbox" />
+              Completed
+            </label>
+            <button type="submit" className="btn btn-primary">
+              Display
+            </button>
+            <div>Currently Displaying: {displayingMessage}</div>
+          </form>
+        </div>
         <div>
           {permissionLevel >= 2 && (
             <>
@@ -391,6 +417,12 @@ function Projects() {
                 className="btn btn-primary add"
               >
                 Register
+              </button>
+              <button
+                onClick={navigateToAddCompany}
+                className="btn btn-primary add"
+              >
+                Add Client Company
               </button>
               <button
                 onClick={navigateToAddEngineers}
@@ -411,26 +443,35 @@ function Projects() {
       <table className="table mt-3">
         <thead>
           <tr>
-            <th>ID</th>
             <th>Project Name</th>
             <th>Status</th>
             <th>Start</th>
             <th>End</th>
             <th>Location</th>
-            <th>Details</th>
-            <th>Quote</th> {/* Add new column */}
+            <th>Notes</th>
+            <th>Quote</th>
+            <th>Purchase</th>
             <th>Engineer Names</th>
             <th>Logs</th>
             <th>Expenses</th>
-            <th>Invoices</th> {/* Add new column */}
-            <th>Notifications</th>
+            <th>Invoices</th>
+            <th>
+              Notifications{" "}
+              <button onClick={handleRefreshAll} className="btn btn-primary">
+                Refresh All
+              </button>
+            </th>
+            <th>Company</th>
+            <th>Amount</th>
+            <th>Contract ID</th>
+            <th>Otek Invoice</th>
+
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {projects.map((project) => (
             <tr key={project.project_id}>
-              <td>{project.project_id}</td>
               <td className="project-name">{project.project_name}</td>
               <td>{project.project_status === 1 ? "Ongoing" : "Complete"}</td>
               <td>{project.start_date}</td>
@@ -441,6 +482,17 @@ function Projects() {
                 {project.quotation_url && (
                   <a
                     href={formatUrl(project.quotation_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    PDF
+                  </a>
+                )}
+              </td>
+              <td>
+                {project.purchase_url && (
+                  <a
+                    href={formatUrl(project.purchase_url)}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -622,6 +674,10 @@ function Projects() {
                   View Notifications
                 </button>
               </td>
+              <td>{project.company_name}</td>
+              <td>{project.amount}</td>
+              <td>{project.contract_id}</td>
+              <td>{project.otek_invoice}</td>
               <td>
                 {permissionLevel >= 2 && (
                   <>
@@ -690,7 +746,7 @@ function Projects() {
               />
             </div>
             <div className="form-group">
-              <label>Details</label>
+              <label>Notes</label>
               <input
                 type="text"
                 name="details"
@@ -718,6 +774,62 @@ function Projects() {
                 onChange={handleChange}
                 className="form-control"
               />
+            </div>
+            <div className="form-group">
+              <label>Purchase URL</label>
+              <input
+                type="text"
+                name="purchase_url"
+                value={editProject.purchase_url}
+                onChange={handleChange}
+                className="form-control"
+              />
+            </div>
+            <div className="form-group">
+              <label>Amount</label>
+              <input
+                type="number"
+                name="amount"
+                value={editProject.amount}
+                onChange={handleChange}
+                className="form-control"
+              />
+            </div>
+            <div className="form-group">
+              <label>Contract ID</label>
+              <input
+                type="text"
+                name="contract_id"
+                value={editProject.contract_id}
+                onChange={handleChange}
+                className="form-control"
+              />
+            </div>
+            <div className="form-group">
+              <label>Otek Invoice</label>
+              <input
+                type="text"
+                name="otek_invoice"
+                value={editProject.otek_invoice}
+                onChange={handleChange}
+                className="form-control"
+              />
+            </div>
+            <div className="form-group">
+              <label>Company Name</label>
+              <select
+                name="company_name"
+                value={editProject.company_name}
+                onChange={handleChange}
+                className="form-control"
+              >
+                <option value="">Select a company</option>
+                {companies.map((company) => (
+                  <option key={company.company_id} value={company.company_name}>
+                    {company.company_name}
+                  </option>
+                ))}
+              </select>
             </div>
             <button
               type="button"
