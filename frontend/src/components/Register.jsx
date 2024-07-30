@@ -49,7 +49,7 @@ function Register() {
     }
   };
   function handleCancel() {
-    nav(-1);
+    navigate(-1);
   }
   return (
     <div className="container mt-5">

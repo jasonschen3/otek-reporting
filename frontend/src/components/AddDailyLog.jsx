@@ -9,7 +9,7 @@ const AddDailyLog = () => {
     log_date: "",
     engineer_id: "",
     status_submitted: "0",
-    date_submitted: null,
+    num_engineers: null,
     hours: "",
     pdf_url: "",
   });
@@ -128,11 +128,11 @@ const AddDailyLog = () => {
         </select>
       </div>
       <div className="form-group">
-        <label>Date Submitted</label>
+        <label># of Engineers</label>
         <input
-          type="date"
-          name="date_submitted"
-          value={newDailyLog.date_submitted}
+          type="number"
+          name="num_engineers"
+          value={newDailyLog.num_engineers}
           onChange={handleChange}
           className="form-control"
         />

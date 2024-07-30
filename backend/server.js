@@ -245,7 +245,7 @@ app.post("/dailyLogs", verifyToken, async (req, res) => {
       dl.status_submitted, 
       dl.hours, 
       dl.pdf_url,
-      TO_CHAR(dl.date_submitted, 'YYYY-MM-DD') AS date_submitted
+      dl.num_engineers
     FROM 
       daily_logs dl 
     JOIN 
@@ -261,22 +261,22 @@ app.post("/dailyLogs", verifyToken, async (req, res) => {
   if (action === "Yesterday") {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.log_date;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.num_engineers ORDER BY dl.log_date;`;
     params = [projectId, formattedYesterday];
   } else if (action === "Today") {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.log_date;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.num_engineers ORDER BY dl.log_date;`;
     params = [projectId, formattedToday];
   } else if (action === "View All") {
     query =
       baseQuery +
-      `GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.log_date;`;
+      `GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.num_engineers ORDER BY dl.log_date;`;
     params = [projectId];
   } else if (action === "End Date" && endDate) {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.date_submitted ORDER BY dl.log_date;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.num_engineers ORDER BY dl.log_date;`;
     params = [projectId, endDate];
   } else {
     return res.status(400).send("Unknown action");
@@ -589,13 +589,13 @@ app.post(
       hours,
       pdf_url,
       daily_log_id,
-      date_submitted,
+      num_engineers,
     } = req.body;
 
     try {
       const result = await db.query(
         `UPDATE daily_logs 
-       SET log_date = $1, status_submitted = $2, hours = $3, pdf_url = $4, date_submitted = $5
+       SET log_date = $1, status_submitted = $2, hours = $3, pdf_url = $4, num_engineers = $5
        WHERE daily_log_id = $6 
        RETURNING *`,
         [
@@ -603,7 +603,7 @@ app.post(
           status_submitted,
           hours,
           pdf_url,
-          date_submitted,
+          num_engineers,
           daily_log_id,
         ]
       );
@@ -651,6 +651,39 @@ app.get("/allEngineers", verifyToken, async (req, res) => {
   }
 });
 
+// Update engineer
+app.put(
+  "/engineers/:id",
+  verifyToken,
+  checkPermissionLevel(2),
+  async (req, res) => {
+    const { id } = req.params;
+    const { name, title } = req.body;
+    try {
+      await db.query(
+        "UPDATE engineers SET name = $1, title = $2 WHERE engineer_id = $3",
+        [name, title, id]
+      );
+      res.sendStatus(200);
+    } catch (error) {
+      console.error("Error updating engineer:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
+);
+
+// Delete engineer
+app.delete("/engineers/:id", verifyToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query("DELETE FROM engineers WHERE engineer_id = $1", [id]);
+    res.sendStatus(200);
+  } catch (error) {
+    console.error("Error deleting engineer:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 app.get("/allCompanies", verifyToken, async (req, res) => {
   try {
     const result = await db.query(
@@ -683,6 +716,33 @@ app.post(
   }
 );
 
+// Update an existing company
+app.put("/companies/:id", verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { company_name } = req.body;
+  try {
+    await db.query(
+      "UPDATE companies SET company_name = $1 WHERE company_id = $2",
+      [company_name, id]
+    );
+    res.sendStatus(200);
+  } catch (error) {
+    console.error("Error updating company:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Delete a company
+app.delete("/companies/:id", verifyToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query("DELETE FROM companies WHERE company_id = $1", [id]);
+    res.sendStatus(200);
+  } catch (error) {
+    console.error("Error deleting company:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 app.get("/engineers", verifyToken, async (req, res) => {
   const { project_id } = req.query;
 
@@ -789,7 +849,7 @@ app.post(
       status_submitted,
       hours,
       pdf_url,
-      date_submitted,
+      num_engineers,
     } = req.body;
 
     try {
@@ -801,7 +861,7 @@ app.post(
         status_submitted,
         hours,
         pdf_url,
-        date_submitted
+        num_engineers
       ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *`,
         [
@@ -811,7 +871,7 @@ app.post(
           status_submitted,
           hours,
           pdf_url,
-          date_submitted,
+          num_engineers,
         ]
       );
       console.log("Daily log", result.rows[0]);

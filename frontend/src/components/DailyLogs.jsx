@@ -212,7 +212,7 @@ const DailyLogs = () => {
             <th>Log Date</th>
             <th>Engineer</th>
             <th>Submitted</th>
-            <th>Date Submitted</th>
+            <th># of Engineers</th>
             <th>Hours</th>
             <th>PDF</th>
             <th>Actions</th>
@@ -238,7 +238,7 @@ const DailyLogs = () => {
                     : "[No engineers]"}
                 </td>
                 <td>{log.status_submitted === "1" ? "Yes" : "No"}</td>
-                <td>{log.date_submitted || ""}</td>
+                <td>{log.num_engineers}</td>
                 <td>{log.hours}</td>
                 <td>
                   {log.pdf_url && (
@@ -302,11 +302,11 @@ const DailyLogs = () => {
               </select>
             </div>
             <div className="form-group">
-              <label>Date Submitted</label>
+              <label># of Engineers</label>
               <input
-                type="date"
-                name="date_submitted"
-                value={editDailyLog.date_submitted || ""}
+                type="number"
+                name="num_engineers"
+                value={editDailyLog.num_engineers}
                 onChange={handleChange}
                 className="form-control"
               />

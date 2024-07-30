@@ -333,16 +333,16 @@ function Projects() {
     });
   };
 
-  const navigateToAddEngineers = () => {
-    navigate("/addEngineers");
-  };
-
   const navigateToRegister = () => {
     navigate("/register");
   };
 
-  const navigateToAddCompany = () => {
-    navigate("/addCompany");
+  const navigateToManageEngineers = () => {
+    navigate("/manageEngineers");
+  };
+
+  const navigateToManageCompanies = () => {
+    navigate("/manageCompanies");
   };
 
   const handleDeleteClick = async (projectId) => {
@@ -467,16 +467,16 @@ function Projects() {
                 Register User
               </button>
               <button
-                onClick={navigateToAddCompany}
+                onClick={navigateToManageCompanies}
                 className="btn btn-primary add"
               >
-                Add Company
+                Manage Companies
               </button>
               <button
-                onClick={navigateToAddEngineers}
+                onClick={navigateToManageEngineers}
                 className="btn btn-primary add"
               >
-                Add Engineers
+                Adjust Engineers
               </button>
               <button
                 onClick={handleAddProject}
@@ -488,7 +488,7 @@ function Projects() {
           )}
         </div>
       </div>
-      {/*Start of table */}
+      {/*Start of projects table */}
       <div id="project-table">
         <table className="table mt-3">
           <thead>

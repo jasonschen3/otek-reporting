@@ -18,6 +18,8 @@ import AddEngineers from "./components/AddEngineers";
 import Invoices from "./components/Invoice";
 import AddInvoice from "./components/AddInvoice";
 import AddCompany from "./components/AddEngineers";
+import ManageEngineers from "./components/ManageEngineers";
+import ManageCompanies from "./components/ManageCompanies";
 
 function App() {
   return (
@@ -36,10 +38,12 @@ function App() {
           <Route path="/addExpense" element={<AddExpense />} />
           <Route path="/editEngineers" element={<EditEngineers />} />
           <Route path="/addEngineers" element={<AddEngineers />} />
+          <Route path="/manageEngineers" element={<ManageEngineers />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/addInvoice" element={<AddInvoice />} />
           <Route path="/addCompany" element={<AddCompany />} />
+          <Route path="/manageCompanies" element={<ManageCompanies />} />
         </Route>
       </Routes>
     </BrowserRouter>
