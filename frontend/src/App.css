@@ -211,3 +211,12 @@ td .btn,
 td button {
   font-size: x-small;
 }
+
+.status-container {
+  display: flex;
+  gap: 10px;
+}
+
+#project-table {
+  overflow-y: auto;
+}

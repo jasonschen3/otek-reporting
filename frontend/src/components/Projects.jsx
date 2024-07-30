@@ -69,6 +69,7 @@ function Projects() {
   const [permissionLevel, setPermissionLevel] = useState(0);
   const [companies, setCompanies] = useState([]);
   const [displayStatus, setDisplayStatus] = useState(1); // Default to Ongoing
+  const [selectedCompany, setSelectedCompany] = useState(""); // State for selected company
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -252,7 +253,7 @@ function Projects() {
     console.log(displayStatus, "CURRENT DISPLAY SELECTED");
 
     try {
-      const response = await axios.post(
+      await axios.post(
         `${BACKEND_IP}/updateProjectDisplay`,
         { status: displayStatus },
         {
@@ -376,6 +377,27 @@ function Projects() {
     }
   };
 
+  const handleCompanyChange = (e) => {
+    setSelectedCompany(e.target.value);
+  };
+
+  const handleCompanySubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const projectsResponse = await axios.get(`${BACKEND_IP}/projects`, {
+        headers: { "access-token": token },
+      });
+      const filteredProjects = selectedCompany
+        ? projectsResponse.data.filter(
+            (project) => project.company_name === selectedCompany
+          )
+        : projectsResponse.data;
+      setProjects(filteredProjects);
+    } catch (error) {
+      console.error("Error filtering projects by company:", error);
+    }
+  };
+
   useEffect(() => {
     projects.forEach((project) => {
       fetchNotificationsCount(project.project_id);
@@ -386,29 +408,54 @@ function Projects() {
     <div className="project-container mt-5">
       <h1>Projects Report</h1>
       <div className="subheading">
-        <div>
-          <form onSubmit={handleUpdateProjectDisplay}>
-            <div className="form-group">
-              <label htmlFor="projectStatusSelect">Select Project Status</label>
+        <div className="status-container">
+          <div>
+            <form onSubmit={handleUpdateProjectDisplay}>
+              <div className="form-group">
+                <label htmlFor="projectStatusSelect">
+                  Select Project Status
+                </label>
+                <select
+                  id="projectStatusSelect"
+                  value={displayStatus}
+                  /* PARSE INT FOR SELECTING INT */
+                  onChange={(e) => setDisplayStatus(parseInt(e.target.value))}
+                  className="form-control"
+                >
+                  <option value={1}>Ongoing</option>
+                  <option value={2}>Completed</option>
+                  <option value={3}>Bill Submitted</option>
+                  <option value={4}>To Be Submitted</option>
+                  <option value={5}>All</option>
+                </select>
+              </div>
+              <button type="submit" className="btn btn-primary">
+                Display
+              </button>
+            </form>
+            <div>Currently Displaying: {displayingMessage}</div>
+          </div>
+          <div className="form-group">
+            <form onSubmit={handleCompanySubmit}>
+              <label htmlFor="companySelect">Select Company</label>
               <select
-                id="projectStatusSelect"
-                value={displayStatus}
-                /* PARSE INT FOR SELECTING INT */
-                onChange={(e) => setDisplayStatus(parseInt(e.target.value))}
+                id="companySelect"
+                value={selectedCompany}
+                onChange={handleCompanyChange}
                 className="form-control"
               >
-                <option value={1}>Ongoing</option>
-                <option value={2}>Completed</option>
-                <option value={3}>Bill Submitted</option>
-                <option value={4}>To Be Submitted</option>
-                <option value={5}>All</option>
+                <option value="">All Companies</option>
+                {companies.map((company) => (
+                  <option key={company.company_id} value={company.company_name}>
+                    {company.company_name}
+                  </option>
+                ))}
               </select>
-            </div>
-            <button type="submit" className="btn btn-primary">
-              Display
-            </button>
-          </form>
-          <div>Currently Displaying: {displayingMessage}</div>
+              <button type="submit" className="btn btn-primary">
+                Display
+              </button>
+            </form>
+          </div>
         </div>
         <div>
           {permissionLevel >= 2 && (
@@ -441,416 +488,423 @@ function Projects() {
           )}
         </div>
       </div>
-      <table className="table mt-3">
-        <thead>
-          <tr>
-            <th>Project Name</th>
-            <th>Status</th>
-            <th>Start</th>
-            <th>End</th>
-            <th>Location</th>
-            <th>Notes</th>
-            <th>Quote</th>
-            <th>Purchase</th>
-            <th>Engineer Names</th>
-            <th>Logs</th>
-            <th>Expenses</th>
-            <th>Invoices</th>
-            <th>
-              Notifications{" "}
-              <button onClick={handleRefreshAll} className="btn btn-primary">
-                Refresh All
-              </button>
-            </th>
-            <th>Company</th>
-            <th>Amount</th>
-            <th>Contract ID</th>
-            <th>Otek Invoice</th>
-
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {projects.map((project) => (
-            <tr key={project.project_id}>
-              <td className="project-name">{project.project_name}</td>
-              <td>{getProjectStatus(project.project_status)}</td>
-              <td>{project.start_date}</td>
-              <td>{project.end_date}</td>
-              <td>{project.location}</td>
-              <td className="wider-col">{project.details}</td>
-              <td>
-                {project.quotation_url && (
-                  <a
-                    href={formatUrl(project.quotation_url)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    PDF
-                  </a>
-                )}
-              </td>
-              <td>
-                {project.purchase_url && (
-                  <a
-                    href={formatUrl(project.purchase_url)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    PDF
-                  </a>
-                )}
-              </td>
-              <td className="wider-col">
-                {project.engineer_names.split(", ").map((name, index) => (
-                  <span key={index} className="engineer-name">
-                    <div style={{ display: "block" }}>
-                      {index + 1}: {name}
-                    </div>
-                  </span>
-                ))}
-              </td>
-              <td>
-                {checkYesterdayTodayRender(project) === 1 && (
-                  <>
-                    <button
-                      onClick={() =>
-                        navigateToDailyLogs(project.project_id, "Today")
-                      }
-                      className={
-                        entriesStatus[project.project_id]?.today
-                          ? "btn btn-success"
-                          : "btn btn-danger"
-                      }
-                    >
-                      Today
-                    </button>
-                    <button
-                      onClick={() =>
-                        navigateToDailyLogs(project.project_id, "Yesterday")
-                      }
-                      className={
-                        entriesStatus[project.project_id]?.yesterday
-                          ? "btn btn-success"
-                          : "btn btn-danger"
-                      }
-                    >
-                      Yesterday
-                    </button>
-                  </>
-                )}
-                {checkYesterdayTodayRender(project) === 2 && (
-                  <>
-                    <button
-                      onClick={() =>
-                        navigateToDailyLogs(project.project_id, "End Date")
-                      }
-                      className={
-                        entriesStatus[project.project_id]?.end_date
-                          ? "btn btn-success"
-                          : "btn btn-danger"
-                      }
-                    >
-                      {project.end_date}
-                    </button>
-                  </>
-                )}
-                {checkYesterdayTodayRender(project) === 3 && (
-                  <>
-                    <button
-                      onClick={() =>
-                        navigateToDailyLogs(project.project_id, "End Date")
-                      }
-                      className={
-                        entriesStatus[project.project_id]?.end_date
-                          ? "btn btn-success"
-                          : "btn btn-danger"
-                      }
-                    >
-                      {project.end_date}
-                    </button>
-                  </>
-                )}
-
-                <button
-                  onClick={() =>
-                    navigateToDailyLogs(project.project_id, "View All")
-                  }
-                >
-                  View All
+      {/*Start of table */}
+      <div id="project-table">
+        <table className="table mt-3">
+          <thead>
+            <tr>
+              <th>Project Name</th>
+              <th>Status</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Location</th>
+              <th>Notes</th>
+              <th>Quote</th>
+              <th>Purchase</th>
+              <th>Engineer Names</th>
+              <th>Logs</th>
+              <th>Expenses</th>
+              <th>Invoices</th>
+              <th>
+                Notifications{" "}
+                <button onClick={handleRefreshAll} className="btn btn-primary">
+                  Refresh All
                 </button>
-              </td>
-
-              <td>
-                {checkYesterdayTodayRender(project) === 1 && (
-                  <>
-                    <button
-                      onClick={() => navigateToExpenses(project, "Today")}
-                      className={
-                        expensesStatus[project.project_id]?.today
-                          ? "btn btn-success"
-                          : "btn btn-danger"
-                      }
-                    >
-                      Today
-                    </button>
-                    <button
-                      onClick={() => navigateToExpenses(project, "Yesterday")}
-                      className={
-                        expensesStatus[project.project_id]?.yesterday
-                          ? "btn btn-success"
-                          : "btn btn-danger"
-                      }
-                    >
-                      Yesterday
-                    </button>
-                  </>
-                )}
-                {checkYesterdayTodayRender(project) === 2 && (
-                  <>
-                    <button
-                      onClick={() => navigateToExpenses(project, "End Date")}
-                      className={
-                        expensesStatus[project.project_id]?.end_date
-                          ? "btn btn-success"
-                          : "btn btn-danger"
-                      }
-                    >
-                      {project.end_date}
-                    </button>
-                  </>
-                )}
-                {checkYesterdayTodayRender(project) === 3 && (
-                  <>
-                    <button
-                      onClick={() => navigateToExpenses(project, "End Date")}
-                      className={
-                        expensesStatus[project.project_id]?.end_date
-                          ? "btn btn-success"
-                          : "btn btn-danger"
-                      }
-                    >
-                      {project.end_date}
-                    </button>
-                  </>
-                )}
-                <button onClick={() => navigateToExpenses(project, "View All")}>
-                  View All
-                </button>
-              </td>
-              <td>
-                <button
-                  onClick={() => navigateToInvoices(project, "Latest")}
-                  className={
-                    latestInvoiceDates[project.project_id]
-                      ? "btn btn-success"
-                      : "btn btn-danger"
-                  }
-                >
-                  Latest
-                </button>
-                <button onClick={() => navigateToInvoices(project, "View All")}>
-                  View All
-                </button>
-              </td>
-              <td className="wider-col">
-                <div>
-                  {notificationsCount[project.project_id] !== undefined ? (
-                    <>
-                      <div>{`${
-                        notificationsCount[project.project_id].type1
-                      } missing logs`}</div>
-                      <div>{`${
-                        notificationsCount[project.project_id].type2
-                      } missing expenses`}</div>
-                      <div>{`${
-                        notificationsCount[project.project_id].type3
-                      } missing invoices`}</div>
-                    </>
-                  ) : (
-                    ""
-                  )}
-                </div>
-                <button onClick={() => navigateToNotifications(project)}>
-                  View Notifications
-                </button>
-              </td>
-              <td>{project.company_name}</td>
-              <td>{project.amount}</td>
-              <td>{project.contract_id}</td>
-              <td>{project.otek_invoice}</td>
-              <td>
-                {permissionLevel >= 2 && (
-                  <>
-                    <button onClick={() => handleEditClick(project)}>
-                      Edit Project
-                    </button>
-                    <button onClick={() => navigateToEditEngineers(project)}>
-                      Edit Engineers
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(project.project_id)}
-                    >
-                      Delete Project
-                    </button>
-                  </>
-                )}
-              </td>
+              </th>
+              <th>Company</th>
+              <th>Amount</th>
+              <th>Contract ID</th>
+              <th>Otek Invoice</th>
+              <th>Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      {editProject && (
-        <div id="editProject" className="edit-form">
-          <h2>Edit Project {editProject.project_name}</h2>
-          <form>
-            <div className="form-group">
-              <label>Project Name</label>
-              <input
-                type="text"
-                name="project_name"
-                value={editProject.project_name}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="form-group">
-              <label>Project Status</label>
-              <select
-                name="project_status"
-                value={editProject.project_status}
-                onChange={handleChange}
-                className="form-control"
+          </thead>
+          <tbody>
+            {projects.map((project) => (
+              <tr key={project.project_id}>
+                <td className="project-name">{project.project_name}</td>
+                <td>{getProjectStatus(project.project_status)}</td>
+                <td>{project.start_date}</td>
+                <td>{project.end_date}</td>
+                <td>{project.location}</td>
+                <td className="wider-col">{project.details}</td>
+                <td>
+                  {project.quotation_url && (
+                    <a
+                      href={formatUrl(project.quotation_url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      PDF
+                    </a>
+                  )}
+                </td>
+                <td>
+                  {project.purchase_url && (
+                    <a
+                      href={formatUrl(project.purchase_url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      PDF
+                    </a>
+                  )}
+                </td>
+                <td className="wider-col">
+                  {project.engineer_names.split(", ").map((name, index) => (
+                    <span key={index} className="engineer-name">
+                      <div style={{ display: "block" }}>
+                        {index + 1}: {name}
+                      </div>
+                    </span>
+                  ))}
+                </td>
+                <td>
+                  {checkYesterdayTodayRender(project) === 1 && (
+                    <>
+                      <button
+                        onClick={() =>
+                          navigateToDailyLogs(project.project_id, "Today")
+                        }
+                        className={
+                          entriesStatus[project.project_id]?.today
+                            ? "btn btn-success"
+                            : "btn btn-danger"
+                        }
+                      >
+                        Today
+                      </button>
+                      <button
+                        onClick={() =>
+                          navigateToDailyLogs(project.project_id, "Yesterday")
+                        }
+                        className={
+                          entriesStatus[project.project_id]?.yesterday
+                            ? "btn btn-success"
+                            : "btn btn-danger"
+                        }
+                      >
+                        Yesterday
+                      </button>
+                    </>
+                  )}
+                  {checkYesterdayTodayRender(project) === 2 && (
+                    <>
+                      <button
+                        onClick={() =>
+                          navigateToDailyLogs(project.project_id, "End Date")
+                        }
+                        className={
+                          entriesStatus[project.project_id]?.end_date
+                            ? "btn btn-success"
+                            : "btn btn-danger"
+                        }
+                      >
+                        {project.end_date}
+                      </button>
+                    </>
+                  )}
+                  {checkYesterdayTodayRender(project) === 3 && (
+                    <>
+                      <button
+                        onClick={() =>
+                          navigateToDailyLogs(project.project_id, "End Date")
+                        }
+                        className={
+                          entriesStatus[project.project_id]?.end_date
+                            ? "btn btn-success"
+                            : "btn btn-danger"
+                        }
+                      >
+                        {project.end_date}
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() =>
+                      navigateToDailyLogs(project.project_id, "View All")
+                    }
+                  >
+                    View All
+                  </button>
+                </td>
+                <td>
+                  {checkYesterdayTodayRender(project) === 1 && (
+                    <>
+                      <button
+                        onClick={() => navigateToExpenses(project, "Today")}
+                        className={
+                          expensesStatus[project.project_id]?.today
+                            ? "btn btn-success"
+                            : "btn btn-danger"
+                        }
+                      >
+                        Today
+                      </button>
+                      <button
+                        onClick={() => navigateToExpenses(project, "Yesterday")}
+                        className={
+                          expensesStatus[project.project_id]?.yesterday
+                            ? "btn btn-success"
+                            : "btn btn-danger"
+                        }
+                      >
+                        Yesterday
+                      </button>
+                    </>
+                  )}
+                  {checkYesterdayTodayRender(project) === 2 && (
+                    <>
+                      <button
+                        onClick={() => navigateToExpenses(project, "End Date")}
+                        className={
+                          expensesStatus[project.project_id]?.end_date
+                            ? "btn btn-success"
+                            : "btn btn-danger"
+                        }
+                      >
+                        {project.end_date}
+                      </button>
+                    </>
+                  )}
+                  {checkYesterdayTodayRender(project) === 3 && (
+                    <>
+                      <button
+                        onClick={() => navigateToExpenses(project, "End Date")}
+                        className={
+                          expensesStatus[project.project_id]?.end_date
+                            ? "btn btn-success"
+                            : "btn btn-danger"
+                        }
+                      >
+                        {project.end_date}
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => navigateToExpenses(project, "View All")}
+                  >
+                    View All
+                  </button>
+                </td>
+                <td>
+                  <button
+                    onClick={() => navigateToInvoices(project, "Latest")}
+                    className={
+                      latestInvoiceDates[project.project_id]
+                        ? "btn btn-success"
+                        : "btn btn-danger"
+                    }
+                  >
+                    Latest
+                  </button>
+                  <button
+                    onClick={() => navigateToInvoices(project, "View All")}
+                  >
+                    View All
+                  </button>
+                </td>
+                <td className="wider-col">
+                  <div>
+                    {notificationsCount[project.project_id] !== undefined ? (
+                      <>
+                        <div>{`${
+                          notificationsCount[project.project_id].type1
+                        } missing logs`}</div>
+                        <div>{`${
+                          notificationsCount[project.project_id].type2
+                        } missing expenses`}</div>
+                        <div>{`${
+                          notificationsCount[project.project_id].type3
+                        } missing invoices`}</div>
+                      </>
+                    ) : (
+                      ""
+                    )}
+                  </div>
+                  <button onClick={() => navigateToNotifications(project)}>
+                    View Notifications
+                  </button>
+                </td>
+                <td>{project.company_name}</td>
+                <td>{project.amount}</td>
+                <td>{project.contract_id}</td>
+                <td>{project.otek_invoice}</td>
+                <td>
+                  {permissionLevel >= 2 && (
+                    <>
+                      <button onClick={() => handleEditClick(project)}>
+                        Edit Project
+                      </button>
+                      <button onClick={() => navigateToEditEngineers(project)}>
+                        Edit Engineers
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(project.project_id)}
+                      >
+                        Delete Project
+                      </button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {editProject && (
+          <div id="editProject" className="edit-form">
+            <h2>Edit Project {editProject.project_name}</h2>
+            <form>
+              <div className="form-group">
+                <label>Project Name</label>
+                <input
+                  type="text"
+                  name="project_name"
+                  value={editProject.project_name}
+                  onChange={handleChange}
+                  className="form-control"
+                />
+              </div>
+              <div className="form-group">
+                <label>Project Status</label>
+                <select
+                  name="project_status"
+                  value={editProject.project_status}
+                  onChange={handleChange}
+                  className="form-control"
+                >
+                  <option value={1}>Ongoing</option>
+                  <option value={2}>Completed</option>
+                  <option value={3}>Bill Submitted</option>
+                  <option value={4}>To Be Submitted</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Start Date</label>
+                <input
+                  type="date"
+                  name="start_date"
+                  value={editProject.start_date}
+                  onChange={handleChange}
+                  className="form-control"
+                />
+              </div>
+              <div className="form-group">
+                <label>End Date</label>
+                <input
+                  type="date"
+                  name="end_date"
+                  value={editProject.end_date || ""}
+                  onChange={handleChange}
+                  className="form-control"
+                />
+              </div>
+              <div className="form-group">
+                <label>Notes</label>
+                <input
+                  type="text"
+                  name="details"
+                  value={editProject.details}
+                  onChange={handleChange}
+                  className="form-control"
+                />
+              </div>
+              <div className="form-group">
+                <label>Location</label>
+                <input
+                  type="text"
+                  name="location"
+                  value={editProject.location}
+                  onChange={handleChange}
+                  className="form-control"
+                />
+              </div>
+              <div className="form-group">
+                <label>Quotation URL</label>
+                <input
+                  type="text"
+                  name="quotation_url"
+                  value={editProject.quotation_url}
+                  onChange={handleChange}
+                  className="form-control"
+                />
+              </div>
+              <div className="form-group">
+                <label>Purchase URL</label>
+                <input
+                  type="text"
+                  name="purchase_url"
+                  value={editProject.purchase_url}
+                  onChange={handleChange}
+                  className="form-control"
+                />
+              </div>
+              <div className="form-group">
+                <label>Amount</label>
+                <input
+                  type="number"
+                  name="amount"
+                  value={editProject.amount}
+                  onChange={handleChange}
+                  className="form-control"
+                />
+              </div>
+              <div className="form-group">
+                <label>Contract ID</label>
+                <input
+                  type="text"
+                  name="contract_id"
+                  value={editProject.contract_id}
+                  onChange={handleChange}
+                  className="form-control"
+                />
+              </div>
+              <div className="form-group">
+                <label>Otek Invoice</label>
+                <input
+                  type="text"
+                  name="otek_invoice"
+                  value={editProject.otek_invoice}
+                  onChange={handleChange}
+                  className="form-control"
+                />
+              </div>
+              <div className="form-group">
+                <label>Company Name</label>
+                <select
+                  name="company_name"
+                  value={editProject.company_name}
+                  onChange={handleChange}
+                  className="form-control"
+                >
+                  <option value="">Select a company</option>
+                  {companies.map((company) => (
+                    <option
+                      key={company.company_id}
+                      value={company.company_name}
+                    >
+                      {company.company_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={handleSave}
+                className="btn btn-primary"
               >
-                <option value={1}>Ongoing</option>
-                <option value={2}>Completed</option>
-                <option value={3}>Bill Submitted</option>
-                <option value={4}>To Be Submitted</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Start Date</label>
-              <input
-                type="date"
-                name="start_date"
-                value={editProject.start_date}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="form-group">
-              <label>End Date</label>
-              <input
-                type="date"
-                name="end_date"
-                value={editProject.end_date || ""}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="form-group">
-              <label>Notes</label>
-              <input
-                type="text"
-                name="details"
-                value={editProject.details}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="form-group">
-              <label>Location</label>
-              <input
-                type="text"
-                name="location"
-                value={editProject.location}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="form-group">
-              <label>Quotation URL</label>
-              <input
-                type="text"
-                name="quotation_url"
-                value={editProject.quotation_url}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="form-group">
-              <label>Purchase URL</label>
-              <input
-                type="text"
-                name="purchase_url"
-                value={editProject.purchase_url}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="form-group">
-              <label>Amount</label>
-              <input
-                type="number"
-                name="amount"
-                value={editProject.amount}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="form-group">
-              <label>Contract ID</label>
-              <input
-                type="text"
-                name="contract_id"
-                value={editProject.contract_id}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="form-group">
-              <label>Otek Invoice</label>
-              <input
-                type="text"
-                name="otek_invoice"
-                value={editProject.otek_invoice}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="form-group">
-              <label>Company Name</label>
-              <select
-                name="company_name"
-                value={editProject.company_name}
-                onChange={handleChange}
-                className="form-control"
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="btn btn-secondary"
               >
-                <option value="">Select a company</option>
-                {companies.map((company) => (
-                  <option key={company.company_id} value={company.company_name}>
-                    {company.company_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="btn btn-primary"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={handleCancelEdit}
-              className="btn btn-secondary"
-            >
-              Cancel
-            </button>
-          </form>
-        </div>
-      )}
+                Cancel
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
