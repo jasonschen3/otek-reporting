@@ -240,6 +240,16 @@ function AddProject() {
         </select>
       </div>
       <div className="form-group">
+        <label>Project Number</label>
+        <input
+          type="number"
+          name="project_number"
+          value={newProject.project_number}
+          onChange={handleNewProjectChange}
+          className="form-control"
+        />
+      </div>
+      <div className="form-group">
         <label>Engineers</label>
         {engineers.map((engineer) => (
           <label key={engineer.engineer_id} style={{ display: "block" }}>

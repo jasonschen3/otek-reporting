@@ -61,14 +61,14 @@ const getProjectStatus = (status) => {
 function Projects() {
   const [projects, setProjects] = useState([]);
   const [editProject, setEditProject] = useState(null);
-  const [displayingMessage, setDisplayingMessage] = useState("Ongoing");
+  const [displayingMessage, setDisplayingMessage] = useState("All");
   const [entriesStatus, setEntriesStatus] = useState({});
   const [expensesStatus, setExpensesStatus] = useState({});
   const [notificationsCount, setNotificationsCount] = useState({});
   const [latestInvoiceDates, setLatestInvoiceDates] = useState({});
   const [permissionLevel, setPermissionLevel] = useState(0);
   const [companies, setCompanies] = useState([]);
-  const [displayStatus, setDisplayStatus] = useState(1); // Default to Ongoing
+  const [displayStatus, setDisplayStatus] = useState(5); // Default to Ongoing
   const [selectedCompany, setSelectedCompany] = useState(""); // State for selected company
 
   const navigate = useNavigate();
@@ -464,13 +464,13 @@ function Projects() {
                 onClick={navigateToRegister}
                 className="btn btn-primary add"
               >
-                Register
+                Register User
               </button>
               <button
                 onClick={navigateToAddCompany}
                 className="btn btn-primary add"
               >
-                Add Client Company
+                Add Company
               </button>
               <button
                 onClick={navigateToAddEngineers}
@@ -493,7 +493,9 @@ function Projects() {
         <table className="table mt-3">
           <thead>
             <tr>
-              <th>Project Name</th>
+              <th>Company</th>
+              <th>Project #</th>
+              <th>Name</th>
               <th>Status</th>
               <th>Start</th>
               <th>End</th>
@@ -501,26 +503,27 @@ function Projects() {
               <th>Notes</th>
               <th>Quote</th>
               <th>Purchase</th>
+              <th>Contract ID</th>
+              <th>Amount</th>
               <th>Engineer Names</th>
-              <th>Logs</th>
+              <th>Daily Logs</th>
               <th>Expenses</th>
               <th>Invoices</th>
+              <th>Otek Invoice #</th>
               <th>
                 Notifications{" "}
                 <button onClick={handleRefreshAll} className="btn btn-primary">
                   Refresh All
                 </button>
               </th>
-              <th>Company</th>
-              <th>Amount</th>
-              <th>Contract ID</th>
-              <th>Otek Invoice</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {projects.map((project) => (
               <tr key={project.project_id}>
+                <td>{project.company_name}</td>
+                <td>{project.project_number}</td>
                 <td className="project-name">{project.project_name}</td>
                 <td>{getProjectStatus(project.project_status)}</td>
                 <td>{project.start_date}</td>
@@ -549,6 +552,8 @@ function Projects() {
                     </a>
                   )}
                 </td>
+                <td>{project.contract_id}</td>
+                <td>{project.amount}</td>
                 <td className="wider-col">
                   {project.engineer_names.split(", ").map((name, index) => (
                     <span key={index} className="engineer-name">
@@ -703,6 +708,7 @@ function Projects() {
                     View All
                   </button>
                 </td>
+                <td>{project.otek_invoice}</td>
                 <td className="wider-col">
                   <div>
                     {notificationsCount[project.project_id] !== undefined ? (
@@ -725,10 +731,6 @@ function Projects() {
                     View Notifications
                   </button>
                 </td>
-                <td>{project.company_name}</td>
-                <td>{project.amount}</td>
-                <td>{project.contract_id}</td>
-                <td>{project.otek_invoice}</td>
                 <td>
                   {permissionLevel >= 2 && (
                     <>
@@ -886,6 +888,16 @@ function Projects() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="form-group">
+                <label>Project Number</label>
+                <input
+                  type="number"
+                  name="project_number"
+                  value={editProject.project_number}
+                  onChange={handleChange}
+                  className="form-control"
+                />
               </div>
               <button
                 type="button"

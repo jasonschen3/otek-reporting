@@ -26,7 +26,7 @@ const db = new pg.Client({
 db.connect();
 
 let projectsInfo = []; // arr of json
-let projectDisplayStatus = 1; // 1 2 3 4 5, display ongoing, display completed, display bill-submitted, to be submitted, display all
+let projectDisplayStatus = 5; // 1 2 3 4 5, display ongoing, display completed, display bill-submitted, to be submitted, display all
 
 const secretKey = process.env.SESSION_KEY;
 
@@ -122,7 +122,8 @@ async function updateProjectInfo() {
       p.amount,
       p.contract_id,
       p.otek_invoice,
-      p.company_name
+      p.company_name,
+      p.project_number
     FROM 
       projects p 
     LEFT JOIN 
@@ -132,9 +133,9 @@ async function updateProjectInfo() {
     WHERE 
       p.project_status = $1 
     GROUP BY 
-      p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location, p.quotation_url, p.purchase_url, p.amount, p.contract_id, p.otek_invoice, p.company_name
+      p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location, p.quotation_url, p.purchase_url, p.amount, p.contract_id, p.otek_invoice, p.company_name, p.project_number
     ORDER BY 
-      p.start_date DESC, p.project_name;
+      p.company_name ASC, p.project_number;
   `;
 
   if (projectDisplayStatus === 1) {
@@ -166,7 +167,8 @@ async function updateProjectInfo() {
         p.amount,
         p.contract_id,
         p.otek_invoice,
-        p.company_name
+        p.company_name,
+        p.project_number
       FROM 
         projects p 
       LEFT JOIN 
@@ -174,9 +176,9 @@ async function updateProjectInfo() {
       LEFT JOIN 
         engineers e ON pae.engineer_id = e.engineer_id 
       GROUP BY 
-        p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location, p.quotation_url, p.purchase_url, p.amount, p.contract_id, p.otek_invoice, p.company_name
+        p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location, p.quotation_url, p.purchase_url, p.amount, p.contract_id, p.otek_invoice, p.company_name, p.project_number
       ORDER BY 
-        p.start_date DESC, p.project_name;
+        p.company_name ASC, p.project_number;
     `);
   }
 
@@ -441,6 +443,7 @@ app.post(
       contract_id,
       otek_invoice,
       company_name,
+      project_number,
     } = req.body;
 
     try {
@@ -457,9 +460,10 @@ app.post(
           amount = $9, 
           contract_id = $10, 
           otek_invoice = $11, 
-          company_name = $12
+          company_name = $12,
+          project_number = $13
         WHERE 
-          project_id = $13 
+          project_id = $14 
         RETURNING *`,
         [
           project_name,
@@ -474,6 +478,7 @@ app.post(
           contract_id,
           otek_invoice,
           company_name,
+          project_number,
           project_id,
         ]
       );
@@ -731,11 +736,12 @@ app.post("/addProject", verifyToken, async (req, res) => {
     amount,
     contract_id,
     otek_invoice,
+    project_number,
   } = req.body;
   try {
     const result = await db.query(
-      `INSERT INTO projects (project_name, project_status, start_date, end_date, details, location, quotation_url, purchase_url, company_name, amount, contract_id, otek_invoice) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      `INSERT INTO projects (project_name, project_status, start_date, end_date, details, location, quotation_url, purchase_url, company_name, amount, contract_id, otek_invoice, project_number) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
       [
         project_name,
         project_status,
@@ -749,6 +755,7 @@ app.post("/addProject", verifyToken, async (req, res) => {
         amount,
         contract_id,
         otek_invoice,
+        project_number,
       ]
     );
 
