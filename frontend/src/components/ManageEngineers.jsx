@@ -70,7 +70,7 @@ function ManageEngineers() {
   };
 
   const navigateToAddEngineers = () => {
-    navigate("/addEngineers");
+    nav("/addEngineers");
   };
 
   const handleBack = () => {
