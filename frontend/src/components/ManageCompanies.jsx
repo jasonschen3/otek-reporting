@@ -33,6 +33,12 @@ function ManageCompanies() {
   };
 
   const handleDeleteCompany = async (company_id) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this company?"
+    );
+    if (!confirmDelete) {
+      return;
+    }
     try {
       await axios.delete(`${BACKEND_IP}/companies/${company_id}`, {
         headers: { "access-token": token },

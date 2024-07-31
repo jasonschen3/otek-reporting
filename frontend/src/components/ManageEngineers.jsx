@@ -35,6 +35,12 @@ function ManageEngineers() {
   };
 
   const handleDeleteEngineer = async (engineer_id) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this company?"
+    );
+    if (!confirmDelete) {
+      return;
+    }
     try {
       await axios.delete(`${BACKEND_IP}/engineers/${engineer_id}`, {
         headers: { "access-token": token },
