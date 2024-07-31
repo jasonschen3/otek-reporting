@@ -3,72 +3,22 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { BACKEND_IP } from "../constants";
-
-const formatUrl = (url) => {
-  if (!url.startsWith("http://") && !url.startsWith("https://")) {
-    return `http://${url}`;
-  }
-  return url;
-};
-
-const parseDate = (dateString) => {
-  return new Date(dateString);
-};
-
-const isSameDay = (date1, date2) => {
-  return (
-    date1.getFullYear() === date2.getFullYear() &&
-    date1.getMonth() === date2.getMonth() &&
-    date1.getDate() === date2.getDate()
-  );
-};
-
-function checkYesterdayTodayRender(project) {
-  // 1) Render everything
-  if (project.end_date === null) {
-    return 1;
-  }
-  const startDate = parseDate(project.start_date);
-  const endDate = parseDate(project.end_date);
-  // 2) 1 day project so render only that day
-  if (project.start_date !== null && isSameDay(startDate, endDate)) {
-    return 2;
-  }
-  const today = new Date();
-  // 3) If today is after end_date, then render only the last 2 days
-  if (today > endDate) {
-    return 3;
-  }
-  return 1;
-}
-const getProjectStatus = (status) => {
-  switch (status) {
-    case 1:
-      return "Ongoing";
-    case 2:
-      return "Completed";
-    case 3:
-      return "Bill Submitted";
-    case 4:
-      return "To Be Submitted";
-    case 5:
-      return "All";
-    default:
-      return "Unknown";
-  }
-};
+import {
+  formatUrl,
+  checkYesterdayTodayRender,
+  getProjectStatus,
+} from "../utils";
 
 function Projects() {
   const [projects, setProjects] = useState([]);
   const [editProject, setEditProject] = useState(null);
-  const [displayingMessage, setDisplayingMessage] = useState("All");
-  const [entriesStatus, setEntriesStatus] = useState({});
+  const [entriesStatus, setEntriesStatus] = useState({}); // Log status
   const [expensesStatus, setExpensesStatus] = useState({});
   const [notificationsCount, setNotificationsCount] = useState({});
   const [latestInvoiceDates, setLatestInvoiceDates] = useState({});
   const [permissionLevel, setPermissionLevel] = useState(0);
   const [companies, setCompanies] = useState([]);
-  const [displayStatus, setDisplayStatus] = useState(5); // Default to Ongoing
+  const [displayStatus, setDisplayStatus] = useState(5); // Default to All
   const [selectedCompany, setSelectedCompany] = useState(""); // State for selected company
 
   const navigate = useNavigate();
@@ -86,6 +36,9 @@ function Projects() {
       .get(`${BACKEND_IP}/projects`, {
         headers: {
           "access-token": token,
+        },
+        params: {
+          projectDisplayStatus: displayStatus,
         },
       })
       .then((res) => {
@@ -154,6 +107,57 @@ function Projects() {
     fetchCompanies();
   }, [navigate, token]);
 
+  useEffect(() => {
+    projects.forEach((project) => {
+      fetchNotificationsCount(project.project_id);
+    });
+  }, [projects]);
+
+  const fetchProjects = async (status) => {
+    try {
+      const projectsResponse = await axios.get(`${BACKEND_IP}/projects`, {
+        headers: {
+          "access-token": token,
+        },
+        params: {
+          projectDisplayStatus: status,
+        },
+      });
+
+      setProjects(projectsResponse.data);
+
+      const [entriesRes, expensesRes] = await axios.all([
+        axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=false`, {
+          headers: { "access-token": token },
+        }),
+        axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=true`, {
+          headers: { "access-token": token },
+        }),
+      ]);
+
+      const entriesStatusData = entriesRes.data.reduce((acc, status) => {
+        acc[status.project_id] = {
+          today: status.today,
+          yesterday: status.yesterday,
+          end_date: status.end_date_status,
+        };
+        return acc;
+      }, {});
+      setEntriesStatus(entriesStatusData);
+
+      const expensesStatusData = expensesRes.data.reduce((acc, status) => {
+        acc[status.project_id] = {
+          today: status.today,
+          yesterday: status.yesterday,
+          end_date: status.end_date_status,
+        };
+        return acc;
+      }, {});
+      setExpensesStatus(expensesStatusData);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    }
+  };
   const fetchNotificationsCount = async (projectId) => {
     try {
       const response = await axios.get(`${BACKEND_IP}/notifications`, {
@@ -212,10 +216,6 @@ function Projects() {
     });
   };
 
-  const handleAddProject = async () => {
-    navigate("/addProject");
-  };
-
   const handleSave = async () => {
     try {
       const response = await axios.post(
@@ -248,103 +248,6 @@ function Projects() {
     setEditProject(null);
   };
 
-  const handleUpdateProjectDisplay = async (e) => {
-    e.preventDefault();
-    console.log(displayStatus, "CURRENT DISPLAY SELECTED");
-
-    try {
-      await axios.post(
-        `${BACKEND_IP}/updateProjectDisplay`,
-        { status: displayStatus },
-        {
-          headers: { "access-token": token },
-        }
-      );
-      setDisplayingMessage(getProjectStatus(displayStatus));
-    } catch (error) {
-      console.error("Error updating project display status:", error);
-    }
-    // Yesterday today display
-    try {
-      const projectsResponse = await axios.get(`${BACKEND_IP}/projects`, {
-        headers: { "access-token": token },
-      });
-
-      setProjects(projectsResponse.data);
-
-      const [entriesRes, expensesRes] = await axios.all([
-        axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=false`, {
-          headers: { "access-token": token },
-        }),
-        axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=true`, {
-          headers: { "access-token": token },
-        }),
-      ]);
-
-      const entriesStatusData = entriesRes.data.reduce((acc, status) => {
-        acc[status.project_id] = {
-          today: status.today,
-          yesterday: status.yesterday,
-          end_date: status.end_date_status,
-        };
-        return acc;
-      }, {});
-      setEntriesStatus(entriesStatusData);
-
-      const expensesStatusData = expensesRes.data.reduce((acc, status) => {
-        acc[status.project_id] = {
-          today: status.today,
-          yesterday: status.yesterday,
-          end_date: status.end_date_status,
-        };
-        return acc;
-      }, {});
-      setExpensesStatus(expensesStatusData);
-    } catch (error) {
-      console.error("Error updating project display:", error);
-    }
-  };
-
-  const navigateToDailyLogs = (projectId, action) => {
-    navigate("/dailyLogs", {
-      state: { projectId, action },
-    });
-  };
-
-  const navigateToExpenses = (project, action) => {
-    navigate("/expenses", {
-      state: { project, action },
-    });
-  };
-
-  const navigateToNotifications = (project) => {
-    navigate("/notifications", { state: { project } });
-  };
-
-  const navigateToInvoices = (project, action) => {
-    navigate("/invoices", {
-      state: { project, action },
-    });
-  };
-
-  const navigateToEditEngineers = (project) => {
-    navigate("/editEngineers", {
-      state: { project },
-    });
-  };
-
-  const navigateToRegister = () => {
-    navigate("/register");
-  };
-
-  const navigateToManageEngineers = () => {
-    navigate("/manageEngineers");
-  };
-
-  const navigateToManageCompanies = () => {
-    navigate("/manageCompanies");
-  };
-
   const handleDeleteClick = async (projectId) => {
     const isConfirmed = window.confirm(
       "Are you sure you want to delete this project?"
@@ -360,6 +263,9 @@ function Projects() {
         );
         const response = await axios.get(`${BACKEND_IP}/projects`, {
           headers: { "access-token": token },
+          params: {
+            projectDisplayStatus: displayStatus,
+          },
         });
         if (response.status === 200) {
           setProjects(response.data);
@@ -377,32 +283,48 @@ function Projects() {
     }
   };
 
-  const handleCompanyChange = (e) => {
-    setSelectedCompany(e.target.value);
+  const handleDisplayChange = async (e) => {
+    const newStatus = parseInt(e.target.value);
+    setDisplayStatus(newStatus);
+
+    try {
+      await axios.post(
+        `${BACKEND_IP}/updateProjectDisplay`,
+        { status: newStatus },
+        {
+          headers: { "access-token": token },
+        }
+      );
+    } catch (error) {
+      console.error("Error updating project display status:", error);
+    }
+
+    fetchProjects(newStatus);
   };
 
-  const handleCompanySubmit = async (e) => {
-    e.preventDefault();
+  const handleCompanyChange = async (e) => {
+    const selectedCompanyName = e.target.value;
+    setSelectedCompany(selectedCompanyName);
+
     try {
       const projectsResponse = await axios.get(`${BACKEND_IP}/projects`, {
         headers: { "access-token": token },
       });
-      const filteredProjects = selectedCompany
+      const filteredProjects = selectedCompanyName
         ? projectsResponse.data.filter(
-            (project) => project.company_name === selectedCompany
+            (project) => project.company_name === selectedCompanyName
           )
         : projectsResponse.data;
       setProjects(filteredProjects);
+      console.log(filteredProjects, " FILTERED PROJECTS");
     } catch (error) {
       console.error("Error filtering projects by company:", error);
     }
   };
 
-  useEffect(() => {
-    projects.forEach((project) => {
-      fetchNotificationsCount(project.project_id);
-    });
-  }, [projects]);
+  const navigateTo = (path, state) => {
+    navigate(path, { state });
+  };
 
   return (
     <div className="project-container mt-5">
@@ -410,34 +332,28 @@ function Projects() {
       <div className="subheading">
         <div className="status-container">
           <div>
-            <form onSubmit={handleUpdateProjectDisplay}>
+            <form>
               <div className="form-group">
-                <label htmlFor="projectStatusSelect">
-                  Select Project Status
-                </label>
+                <label htmlFor="projectStatusSelect">Project Status</label>
                 <select
                   id="projectStatusSelect"
                   value={displayStatus}
                   /* PARSE INT FOR SELECTING INT */
-                  onChange={(e) => setDisplayStatus(parseInt(e.target.value))}
+                  onChange={handleDisplayChange}
                   className="form-control"
                 >
+                  <option value={5}>All</option>
                   <option value={1}>Ongoing</option>
                   <option value={2}>Completed</option>
                   <option value={3}>Bill Submitted</option>
                   <option value={4}>To Be Submitted</option>
-                  <option value={5}>All</option>
                 </select>
               </div>
-              <button type="submit" className="btn btn-primary">
-                Display
-              </button>
             </form>
-            <div>Currently Displaying: {displayingMessage}</div>
           </div>
           <div className="form-group">
-            <form onSubmit={handleCompanySubmit}>
-              <label htmlFor="companySelect">Select Company</label>
+            <form>
+              <label htmlFor="companySelect">Company</label>
               <select
                 id="companySelect"
                 value={selectedCompany}
@@ -451,9 +367,6 @@ function Projects() {
                   </option>
                 ))}
               </select>
-              <button type="submit" className="btn btn-primary">
-                Display
-              </button>
             </form>
           </div>
         </div>
@@ -461,25 +374,25 @@ function Projects() {
           {permissionLevel >= 2 && (
             <>
               <button
-                onClick={navigateToRegister}
+                onClick={() => navigateTo("/register")}
                 className="btn btn-primary add"
               >
                 Register User
               </button>
               <button
-                onClick={navigateToManageCompanies}
+                onClick={() => navigateTo("/manageCompanies")}
                 className="btn btn-primary add"
               >
                 Manage Companies
               </button>
               <button
-                onClick={navigateToManageEngineers}
+                onClick={() => navigateTo("/manageEngineers")}
                 className="btn btn-primary add"
               >
                 Adjust Engineers
               </button>
               <button
-                onClick={handleAddProject}
+                onClick={() => navigateTo("/addProject")}
                 className="btn btn-primary add"
               >
                 Add Project
@@ -568,7 +481,10 @@ function Projects() {
                     <>
                       <button
                         onClick={() =>
-                          navigateToDailyLogs(project.project_id, "Today")
+                          navigateTo("/dailyLogs", {
+                            projectId: project.project_id,
+                            action: "Today",
+                          })
                         }
                         className={
                           entriesStatus[project.project_id]?.today
@@ -580,7 +496,10 @@ function Projects() {
                       </button>
                       <button
                         onClick={() =>
-                          navigateToDailyLogs(project.project_id, "Yesterday")
+                          navigateTo("/dailyLogs", {
+                            projectId: project.project_id,
+                            action: "Yesterday",
+                          })
                         }
                         className={
                           entriesStatus[project.project_id]?.yesterday
@@ -596,7 +515,10 @@ function Projects() {
                     <>
                       <button
                         onClick={() =>
-                          navigateToDailyLogs(project.project_id, "End Date")
+                          navigateTo("/dailyLogs", {
+                            projectId: project.project_id,
+                            action: "End Date",
+                          })
                         }
                         className={
                           entriesStatus[project.project_id]?.end_date
@@ -612,7 +534,10 @@ function Projects() {
                     <>
                       <button
                         onClick={() =>
-                          navigateToDailyLogs(project.project_id, "End Date")
+                          navigateTo("/dailyLogs", {
+                            projectId: project.project_id,
+                            action: "End Date",
+                          })
                         }
                         className={
                           entriesStatus[project.project_id]?.end_date
@@ -626,7 +551,10 @@ function Projects() {
                   )}
                   <button
                     onClick={() =>
-                      navigateToDailyLogs(project.project_id, "View All")
+                      navigateTo("/dailyLogs", {
+                        projectId: project.project_id,
+                        action: "View All",
+                      })
                     }
                   >
                     View All
@@ -636,7 +564,12 @@ function Projects() {
                   {checkYesterdayTodayRender(project) === 1 && (
                     <>
                       <button
-                        onClick={() => navigateToExpenses(project, "Today")}
+                        onClick={() =>
+                          navigateTo("/expenses", {
+                            project: project,
+                            action: "Today",
+                          })
+                        }
                         className={
                           expensesStatus[project.project_id]?.today
                             ? "btn btn-success"
@@ -646,7 +579,12 @@ function Projects() {
                         Today
                       </button>
                       <button
-                        onClick={() => navigateToExpenses(project, "Yesterday")}
+                        onClick={() =>
+                          navigateTo("/expenses", {
+                            project: project,
+                            action: "Yesterday",
+                          })
+                        }
                         className={
                           expensesStatus[project.project_id]?.yesterday
                             ? "btn btn-success"
@@ -660,7 +598,12 @@ function Projects() {
                   {checkYesterdayTodayRender(project) === 2 && (
                     <>
                       <button
-                        onClick={() => navigateToExpenses(project, "End Date")}
+                        onClick={() =>
+                          navigateTo("/expenses", {
+                            project: project,
+                            action: "End Date",
+                          })
+                        }
                         className={
                           expensesStatus[project.project_id]?.end_date
                             ? "btn btn-success"
@@ -674,7 +617,12 @@ function Projects() {
                   {checkYesterdayTodayRender(project) === 3 && (
                     <>
                       <button
-                        onClick={() => navigateToExpenses(project, "End Date")}
+                        onClick={() =>
+                          navigateTo("/expenses", {
+                            project: project,
+                            action: "End Date",
+                          })
+                        }
                         className={
                           expensesStatus[project.project_id]?.end_date
                             ? "btn btn-success"
@@ -686,14 +634,24 @@ function Projects() {
                     </>
                   )}
                   <button
-                    onClick={() => navigateToExpenses(project, "View All")}
+                    onClick={() =>
+                      navigateTo("/expenses", {
+                        project: project,
+                        action: "View All",
+                      })
+                    }
                   >
                     View All
                   </button>
                 </td>
                 <td>
                   <button
-                    onClick={() => navigateToInvoices(project, "Latest")}
+                    onClick={() =>
+                      navigateTo("/invoices", {
+                        project: project,
+                        action: "Latest",
+                      })
+                    }
                     className={
                       latestInvoiceDates[project.project_id]
                         ? "btn btn-success"
@@ -703,7 +661,12 @@ function Projects() {
                     Latest
                   </button>
                   <button
-                    onClick={() => navigateToInvoices(project, "View All")}
+                    onClick={() =>
+                      navigateTo("/invoices", {
+                        project: project,
+                        action: "View All",
+                      })
+                    }
                   >
                     View All
                   </button>
@@ -727,7 +690,11 @@ function Projects() {
                       ""
                     )}
                   </div>
-                  <button onClick={() => navigateToNotifications(project)}>
+                  <button
+                    onClick={() =>
+                      navigateTo("/notifications", { project: project })
+                    }
+                  >
                     View Notifications
                   </button>
                 </td>
@@ -737,7 +704,11 @@ function Projects() {
                       <button onClick={() => handleEditClick(project)}>
                         Edit Project
                       </button>
-                      <button onClick={() => navigateToEditEngineers(project)}>
+                      <button
+                        onClick={() =>
+                          navigateTo("/editEngineers", { project: project })
+                        }
+                      >
                         Edit Engineers
                       </button>
                       <button

@@ -1,6 +1,0 @@
-.env
-*.sql
-node_modules
-example_files
-keys.txt
-views

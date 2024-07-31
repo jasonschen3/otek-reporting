@@ -160,29 +160,40 @@ button {
   white-space: pre-wrap;
 }
 
-/* Header styles */
-.navbar {
-  font-size: x-large;
-  text-decoration: none;
-  height: 12vh;
-}
-
-.navbar img {
-  height: 100%;
-  margin-left: 10vw;
-}
-
-.navbar ul {
+.navbar-container {
   display: flex;
   align-items: center;
-  margin-right: 10vw;
-  gap: 40px;
-  list-style-type: none; /* Removes bullet points */
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 20px;
 }
 
-.navbar a {
-  text-decoration: none; /* Removes underline from links */
-  color: gainsboro; /* Sets the link color to white */
+.navbar-logo {
+  height: 40px; /* Adjust the height as needed */
+}
+
+.navbar-clock {
+  color: white; /* Assuming the GlobalClock component will take a className prop */
+}
+
+.navbar-links {
+  list-style: none;
+  display: flex;
+  gap: 20px;
+}
+
+.navbar-links li {
+  display: inline;
+}
+
+.navbar-links a {
+  color: white;
+  text-decoration: none;
+  font-size: 16px;
+}
+
+.navbar-links a:hover {
+  text-decoration: underline;
 }
 
 .back,

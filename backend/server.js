@@ -25,9 +25,6 @@ const db = new pg.Client({
 });
 db.connect();
 
-let projectsInfo = []; // arr of json
-let projectDisplayStatus = 5; // 1 2 3 4 5, display ongoing, display completed, display bill-submitted, to be submitted, display all
-
 const secretKey = process.env.SESSION_KEY;
 
 function generateToken(user) {
@@ -104,10 +101,22 @@ app.post("/login", async (req, res) => {
   }
 });
 
-async function updateProjectInfo() {
-  let currProjectsInfo = null;
+// Function to get formatted date string (e.g., YYYY-MM-DD)
+const getFormattedDate = (date) => {
+  const year = date.getFullYear();
+  const month = ("0" + (date.getMonth() + 1)).slice(-2);
+  const day = ("0" + date.getDate()).slice(-2);
+  return `${year}-${month}-${day}`;
+};
 
-  const query = `
+app.get("/", async (req, res) => {
+  res.send("Root of server");
+});
+
+app.get("/projects", verifyToken, async (req, res) => {
+  const { projectDisplayStatus } = req.query;
+  try {
+    const allProjects = await db.query(`
     SELECT 
       p.project_id, 
       p.project_name, 
@@ -130,79 +139,23 @@ async function updateProjectInfo() {
       projects_assign_engineers pae ON p.project_id = pae.project_id 
     LEFT JOIN 
       engineers e ON pae.engineer_id = e.engineer_id 
-    WHERE 
-      p.project_status = $1 
     GROUP BY 
       p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location, p.quotation_url, p.purchase_url, p.amount, p.contract_id, p.otek_invoice, p.company_name, p.project_number
     ORDER BY 
       p.company_name ASC, p.project_number;
-  `;
+  `);
+    let projectsInfo = allProjects.rows;
 
-  if (projectDisplayStatus === 1) {
-    // ongoing projects
-    currProjectsInfo = await db.query(query, [1]);
-  } else if (projectDisplayStatus === 2) {
-    // finished projects
-    currProjectsInfo = await db.query(query, [2]);
-  } else if (projectDisplayStatus === 3) {
-    // bill submitted projects
-    currProjectsInfo = await db.query(query, [3]);
-  } else if (projectDisplayStatus === 4) {
-    // to be submitted projects
-    currProjectsInfo = await db.query(query, [4]);
-  } else if (projectDisplayStatus === 5) {
-    // all projects
-    currProjectsInfo = await db.query(`
-      SELECT 
-        p.project_id, 
-        p.project_name, 
-        p.project_status, 
-        TO_CHAR(p.start_date, 'YYYY-MM-DD') AS start_date, 
-        TO_CHAR(p.end_date, 'YYYY-MM-DD') AS end_date, 
-        COALESCE(STRING_AGG(e.name, ', '), '') AS engineer_names, 
-        p.details, 
-        p.location,
-        p.quotation_url,
-        p.purchase_url,
-        p.amount,
-        p.contract_id,
-        p.otek_invoice,
-        p.company_name,
-        p.project_number
-      FROM 
-        projects p 
-      LEFT JOIN 
-        projects_assign_engineers pae ON p.project_id = pae.project_id 
-      LEFT JOIN 
-        engineers e ON pae.engineer_id = e.engineer_id 
-      GROUP BY 
-        p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location, p.quotation_url, p.purchase_url, p.amount, p.contract_id, p.otek_invoice, p.company_name, p.project_number
-      ORDER BY 
-        p.company_name ASC, p.project_number;
-    `);
-  }
+    if (projectDisplayStatus && projectDisplayStatus !== "5") {
+      const status = parseInt(projectDisplayStatus, 10);
+      projectsInfo = projectsInfo.filter(
+        (project) => project.project_status === status
+      );
+    }
 
-  projectsInfo = currProjectsInfo.rows;
-}
-
-// Function to get formatted date string (e.g., YYYY-MM-DD)
-const getFormattedDate = (date) => {
-  const year = date.getFullYear();
-  const month = ("0" + (date.getMonth() + 1)).slice(-2);
-  const day = ("0" + date.getDate()).slice(-2);
-  return `${year}-${month}-${day}`;
-};
-
-app.get("/", async (req, res) => {
-  res.send("Root of server");
-});
-
-app.get("/projects", verifyToken, async (req, res) => {
-  try {
-    await updateProjectInfo();
     res.json(projectsInfo);
   } catch (error) {
-    console.error("Error updating company info:", error);
+    console.error("Error fetching project info:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -371,15 +324,6 @@ app.post("/expenses", verifyToken, async (req, res) => {
     console.error("Error fetching expenses:", error);
     res.status(500).send("Error fetching expenses");
   }
-});
-
-// // Toggle what to display based on status
-app.post("/updateProjectDisplay", verifyToken, async (req, res) => {
-  const { status } = req.body;
-  // console.log("Received status ", status);
-
-  projectDisplayStatus = status;
-  res.redirect("/projects");
 });
 
 app.post(

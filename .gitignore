@@ -23,4 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 
-.pem
+# Pem
+*.pem
+
+# Backend
+.env
+*.sql
+node_modules
+example_files
+views
