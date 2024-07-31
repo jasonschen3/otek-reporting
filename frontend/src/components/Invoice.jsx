@@ -3,13 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { BACKEND_IP } from "../constants";
-
-const formatUrl = (url) => {
-  if (!url.startsWith("http://") && !url.startsWith("https://")) {
-    return `http://${url}`;
-  }
-  return url;
-};
+import { formatUrl } from "../utils";
 
 function Invoices() {
   const [invoices, setInvoices] = useState([]);

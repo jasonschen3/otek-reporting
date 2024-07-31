@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import GlobalClock from "./GlobalClock"; // Assuming GlobalClock is another component
+import GlobalClock from "./GlobalClock";
 
 const Header = () => {
   return (

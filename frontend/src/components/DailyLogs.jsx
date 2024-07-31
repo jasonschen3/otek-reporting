@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { BACKEND_IP } from "../constants";
+import { formatUrl } from "../utils";
 
 const DailyLogs = () => {
   const [dailyLogs, setDailyLogs] = useState([]);
@@ -184,13 +185,6 @@ const DailyLogs = () => {
     } catch (error) {
       console.error("Error updating daily log:", error);
     }
-  };
-
-  const formatUrl = (url) => {
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      return `http://${url}`;
-    }
-    return url;
   };
 
   return (

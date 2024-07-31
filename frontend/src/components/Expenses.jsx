@@ -19,7 +19,6 @@ const Expenses = () => {
       return;
     }
 
-    // Decode token to get permission level
     const decoded = jwtDecode(token);
     setPermissionLevel(decoded.permission_level);
 
