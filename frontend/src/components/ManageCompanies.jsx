@@ -21,6 +21,7 @@ function ManageCompanies() {
         headers: { "access-token": token },
       });
       setCompanies(response.data);
+      setMessage("");
     } catch (error) {
       setMessage("Error fetching companies");
       console.error("Error fetching companies:", error);
@@ -72,30 +73,6 @@ function ManageCompanies() {
   const handleCancelEdit = () => {
     setEditingCompany(null);
     setCompanyName("");
-  };
-
-  const handleAddCompany = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await axios.post(
-        `${BACKEND_IP}/addCompany`,
-        {
-          company_name: companyName,
-        },
-        {
-          headers: { "access-token": token },
-        }
-      );
-      if (response.status === 200) {
-        setCompanyName("");
-        fetchCompanies();
-      } else {
-        setMessage("Failed to add company");
-      }
-    } catch (error) {
-      setMessage(error.response?.data?.message || "Error adding company");
-      console.error("Error adding company:", error);
-    }
   };
 
   const navigateToAddCompany = () => {

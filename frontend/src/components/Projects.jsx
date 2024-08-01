@@ -389,7 +389,7 @@ function Projects() {
                 onClick={() => navigateTo("/manageEngineers")}
                 className="btn btn-primary add"
               >
-                Adjust Engineers
+                Manage Engineers
               </button>
               <button
                 onClick={() => navigateTo("/addProject")}
@@ -417,7 +417,7 @@ function Projects() {
               <th>Quote</th>
               <th>Purchase</th>
               <th>Contract ID</th>
-              <th>Amount</th>
+              <th>Amount ($)</th>
               <th>Engineer Names</th>
               <th>Daily Logs</th>
               <th>Expenses</th>
@@ -676,15 +676,21 @@ function Projects() {
                   <div>
                     {notificationsCount[project.project_id] !== undefined ? (
                       <>
-                        <div>{`${
-                          notificationsCount[project.project_id].type1
-                        } missing logs`}</div>
-                        <div>{`${
-                          notificationsCount[project.project_id].type2
-                        } missing expenses`}</div>
-                        <div>{`${
-                          notificationsCount[project.project_id].type3
-                        } missing invoices`}</div>
+                        {notificationsCount[project.project_id].type1 !== 0 && (
+                          <div>{`${
+                            notificationsCount[project.project_id].type1
+                          } missing logs`}</div>
+                        )}
+                        {notificationsCount[project.project_id].type3 !== 0 && (
+                          <div>{`${
+                            notificationsCount[project.project_id].type3
+                          } missing invoices`}</div>
+                        )}
+                        {notificationsCount[project.project_id].type2 !== 0 && (
+                          <div>{`${
+                            notificationsCount[project.project_id].type2
+                          } overdue payments`}</div>
+                        )}
                       </>
                     ) : (
                       ""
@@ -812,7 +818,7 @@ function Projects() {
                 />
               </div>
               <div className="form-group">
-                <label>Amount</label>
+                <label>Amount ($)</label>
                 <input
                   type="number"
                   name="amount"

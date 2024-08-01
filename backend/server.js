@@ -128,7 +128,7 @@ app.get("/projects", verifyToken, async (req, res) => {
       p.location,
       p.quotation_url,
       p.purchase_url,
-      p.amount,
+      TRUNC(p.amount) AS amount,
       p.contract_id,
       p.otek_invoice,
       p.company_name,
@@ -198,7 +198,8 @@ app.post("/dailyLogs", verifyToken, async (req, res) => {
       dl.status_submitted, 
       dl.hours, 
       dl.pdf_url,
-      dl.num_engineers
+      dl.num_engineers,
+      dl.note
     FROM 
       daily_logs dl 
     JOIN 
@@ -214,22 +215,22 @@ app.post("/dailyLogs", verifyToken, async (req, res) => {
   if (action === "Yesterday") {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.num_engineers ORDER BY dl.log_date;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.num_engineers, dl.note ORDER BY dl.log_date;`;
     params = [projectId, formattedYesterday];
   } else if (action === "Today") {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.num_engineers ORDER BY dl.log_date;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.num_engineers, dl.note ORDER BY dl.log_date;`;
     params = [projectId, formattedToday];
   } else if (action === "View All") {
     query =
       baseQuery +
-      `GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.num_engineers ORDER BY dl.log_date;`;
+      `GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.num_engineers, dl.note ORDER BY dl.log_date;`;
     params = [projectId];
   } else if (action === "End Date" && endDate) {
     query =
       baseQuery +
-      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.num_engineers ORDER BY dl.log_date;`;
+      `AND dl.log_date = $2 GROUP BY dl.daily_log_id, p.project_name, dl.status_submitted, dl.hours, dl.log_date, dl.num_engineers, dl.note ORDER BY dl.log_date;`;
     params = [projectId, endDate];
   } else {
     return res.status(400).send("Unknown action");
@@ -534,13 +535,14 @@ app.post(
       pdf_url,
       daily_log_id,
       num_engineers,
+      note,
     } = req.body;
 
     try {
       const result = await db.query(
         `UPDATE daily_logs 
-       SET log_date = $1, status_submitted = $2, hours = $3, pdf_url = $4, num_engineers = $5
-       WHERE daily_log_id = $6 
+       SET log_date = $1, status_submitted = $2, hours = $3, pdf_url = $4, num_engineers = $5, note = $6
+       WHERE daily_log_id = $7
        RETURNING *`,
         [
           log_date,
@@ -548,6 +550,7 @@ app.post(
           hours,
           pdf_url,
           num_engineers,
+          note,
           daily_log_id,
         ]
       );
@@ -660,17 +663,36 @@ app.post(
   }
 );
 
-// Update an existing company
+// Update an existing company and project with company name
 app.put("/companies/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const { company_name } = req.body;
   try {
+    await db.query("BEGIN"); // Start transaction
+
+    // Retrieve the old company name
+    const result = await db.query(
+      "SELECT company_name FROM companies WHERE company_id = $1",
+      [id]
+    );
+
+    const oldCompanyName = result.rows[0].company_name;
+    // Update company name in the companies table
     await db.query(
       "UPDATE companies SET company_name = $1 WHERE company_id = $2",
       [company_name, id]
     );
+
+    // Update company name in the projects table
+    await db.query(
+      "UPDATE projects SET company_name = $1 WHERE company_name = $2",
+      [company_name, oldCompanyName]
+    );
+
+    await db.query("COMMIT"); // Commit transaction
     res.sendStatus(200);
   } catch (error) {
+    await db.query("ROLLBACK"); // Rollback transaction in case of error
     console.error("Error updating company:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
@@ -794,6 +816,7 @@ app.post(
       hours,
       pdf_url,
       num_engineers,
+      note,
     } = req.body;
 
     try {
@@ -805,8 +828,9 @@ app.post(
         status_submitted,
         hours,
         pdf_url,
-        num_engineers
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        num_engineers,
+        note
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *`,
         [
           project_id,
@@ -816,6 +840,7 @@ app.post(
           hours,
           pdf_url,
           num_engineers,
+          note,
         ]
       );
       console.log("Daily log", result.rows[0]);

@@ -209,6 +209,7 @@ const DailyLogs = () => {
             <th># of Engineers</th>
             <th>Hours</th>
             <th>PDF</th>
+            <th>Note</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -245,6 +246,8 @@ const DailyLogs = () => {
                     </a>
                   )}
                 </td>
+
+                <td>{log.note}</td>
                 <td>
                   {permissionLevel >= 2 && (
                     <>
@@ -315,12 +318,24 @@ const DailyLogs = () => {
                 className="form-control"
               />
             </div>
+
             <div className="form-group">
               <label>PDF URL</label>
               <input
                 type="text"
                 name="pdf_url"
                 value={editDailyLog.pdf_url}
+                onChange={handleChange}
+                className="form-control"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Note</label>
+              <input
+                type="text"
+                name="note"
+                value={editDailyLog.note}
                 onChange={handleChange}
                 className="form-control"
               />

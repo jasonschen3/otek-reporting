@@ -157,6 +157,15 @@ const AddDailyLog = () => {
           className="form-control"
         />
       </div>
+      <div className="form-group">
+        <label>Note</label>
+        <input
+          name="note"
+          value={newDailyLog.note}
+          onChange={handleChange}
+          className="form-control"
+        />
+      </div>
       <button type="submit" className="btn btn-primary">
         Add
       </button>

@@ -46,8 +46,9 @@ function ManageEngineers() {
         headers: { "access-token": token },
       });
       fetchEngineers();
+      setMessage("");
     } catch (error) {
-      setMessage("Error deleting engineer");
+      setMessage("Error deleting engineer: engineer is already in a project");
       console.error("Error deleting engineer:", error);
     }
   };

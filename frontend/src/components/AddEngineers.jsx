@@ -1,26 +1,37 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { BACKEND_IP } from "../constants";
 
-function AddCompany() {
-  const [companyName, setCompanyName] = useState("");
+function AddEngineers() {
   const [message, setMessage] = useState("");
+  const [newEngineer, setNewEngineer] = useState({
+    name: "",
+    title: "",
+  });
   const nav = useNavigate();
   const token = localStorage.getItem("token");
 
-  const handleCompanyNameChange = (e) => {
-    setCompanyName(e.target.value);
+  useEffect(() => {
+    if (!token) {
+      nav("/unauthorized");
+    }
+  }, [nav]);
+
+  const handleNewEngineerChange = (e) => {
+    const { name, value } = e.target;
+    setNewEngineer({
+      ...newEngineer,
+      [name]: value,
+    });
   };
 
-  const handleAddCompany = async (e) => {
+  const handleAddEngineer = async (e) => {
     e.preventDefault();
     try {
       const response = await axios.post(
-        `${BACKEND_IP}/addCompany`,
-        {
-          company_name: companyName,
-        },
+        `${BACKEND_IP}/addEngineer`,
+        newEngineer,
         {
           headers: {
             "access-token": token,
@@ -28,14 +39,21 @@ function AddCompany() {
         }
       );
       if (response.status === 200) {
-        setCompanyName("");
+        setNewEngineer({
+          name: "",
+          title: "",
+        });
         nav(-1);
       } else {
-        setMessage("Failed to add company");
+        setMessage("Failed to add engineer");
       }
     } catch (error) {
-      setMessage(error.response?.data?.message || "Error adding company");
-      console.error("Error adding company:", error);
+      if (error.response && error.response.status === 403) {
+        alert("You do not have the required permission level");
+      } else {
+        setMessage("Error adding engineer");
+        console.error("Error adding engineer:", error);
+      }
     }
   };
 
@@ -44,14 +62,26 @@ function AddCompany() {
   };
 
   return (
-    <form onSubmit={handleAddCompany} className="container mt-5">
-      <h2>Add Company</h2>
+    <form onSubmit={handleAddEngineer} className="container mt-5">
+      <h2>Add Engineer</h2>
       <div className="form-group">
-        <label>Company Name</label>
+        <label>Name</label>
         <input
           type="text"
-          value={companyName}
-          onChange={handleCompanyNameChange}
+          name="name"
+          value={newEngineer.name}
+          onChange={handleNewEngineerChange}
+          className="form-control"
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label>Title</label>
+        <input
+          type="text"
+          name="title"
+          value={newEngineer.title}
+          onChange={handleNewEngineerChange}
           className="form-control"
           required
         />
@@ -71,4 +101,4 @@ function AddCompany() {
   );
 }
 
-export default AddCompany;
+export default AddEngineers;
