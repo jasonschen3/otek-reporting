@@ -5,6 +5,8 @@ import bcrypt from "bcrypt";
 import env from "dotenv";
 import cors from "cors";
 import jwt from "jsonwebtoken";
+import pkg from "@18f/us-federal-holidays";
+const { isAHoliday } = pkg;
 
 env.config();
 const app = express();
@@ -1106,9 +1108,15 @@ app.get("/notifications", verifyToken, async (req, res) => {
   }
 });
 
-const isWeekend = (date) => {
+const isWeekendOrHoliday = (date) => {
   const day = date.getDay();
-  return day === 0 || day === 6; // Sunday (0) or Saturday (6)
+  const month = date.getMonth();
+  const dayOfMonth = date.getDate();
+
+  // Check for Juneteenth (June 19th)
+  const isJuneteenth = month === 5 && dayOfMonth === 19; // Months are 0-indexed, so June is 5
+
+  return day === 0 || day === 6 || isAHoliday(date) || isJuneteenth;
 };
 
 const checkAndUpdateNotifications = async () => {
@@ -1122,7 +1130,7 @@ const checkAndUpdateNotifications = async () => {
     for (const project of projects.rows) {
       const { project_id } = project;
 
-      // Check for missing daily logs
+      // Type 1: Check for missing daily logs
       const projectResult = await db.query(
         `SELECT start_date, end_date FROM projects WHERE project_id = $1`,
         [project_id]
@@ -1159,7 +1167,7 @@ const checkAndUpdateNotifications = async () => {
         const formattedDate = date.toISOString().split("T")[0];
 
         // Skip weekends
-        if (isWeekend(date)) {
+        if (isWeekendOrHoliday(date)) {
           continue;
         }
         if (!logDates.includes(formattedDate)) {
@@ -1167,7 +1175,7 @@ const checkAndUpdateNotifications = async () => {
         }
       }
 
-      // Add new notifications for missing dates
+      // Add new notifications for the missing dates
       for (const missingDate of missingDates) {
         await db.query(
           "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
@@ -1175,7 +1183,7 @@ const checkAndUpdateNotifications = async () => {
         );
       }
 
-      // Check for invoice expenses where payment has not been received after 30 days
+      // Type 2: Check for invoice expenses where payment has not been received after 30 days
       const invoiceResult = await db.query(
         `SELECT invoice_date, has_paid, amount FROM invoices WHERE project_id = $1`,
         [project_id]
@@ -1219,11 +1227,13 @@ const checkAndUpdateNotifications = async () => {
       const missingInvoices = reqNumberOfInvoices - currInvoices;
 
       for (let i = 0; i < missingInvoices; i++) {
-        const currDate = new Date();
+        const notificationDate = projectResult.rows[0].end_date
+          ? new Date(projectResult.rows[0].end_date)
+          : new Date();
 
         await db.query(
           "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
-          [3, currDate, `Invoice required`, project_id]
+          [3, notificationDate, `Invoice required`, project_id]
         );
       }
     }
