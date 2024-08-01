@@ -10,6 +10,8 @@ const DailyLogs = () => {
   const [projectTitle, setProjectTitle] = useState("");
   const [editDailyLog, setEditDailyLog] = useState(null);
   const [permissionLevel, setPermissionLevel] = useState(0);
+  const [engineers, setEngineers] = useState([]);
+
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId, action, highlightLogId } = location.state || {};
@@ -66,9 +68,21 @@ const DailyLogs = () => {
         console.error("Error fetching project name:", error);
       }
     };
+    const fetchEngineers = async () => {
+      try {
+        const response = await axios.get(`${BACKEND_IP}/engineers`, {
+          params: { project_id: projectId },
+          headers: { "access-token": token },
+        }); // Adjust the endpoint to your actual API
+        setEngineers(response.data);
+      } catch (error) {
+        console.error("Error fetching engineers:", error);
+      }
+    };
 
     fetchDailyLogs();
     fetchProjectName();
+    fetchEngineers();
   }, [projectId, action, navigate, token]);
 
   const handleCancelEdit = () => {
@@ -285,6 +299,24 @@ const DailyLogs = () => {
                 onChange={handleChange}
                 className="form-control"
               />
+            </div>
+            <div className="form-group">
+              <label>Engineer</label>
+              <select
+                name="engineer_id"
+                value={editDailyLog.engineer_id}
+                onChange={handleChange}
+                className="form-control"
+              >
+                {engineers.map((engineer) => (
+                  <option
+                    key={engineer.engineer_id}
+                    value={engineer.engineer_id}
+                  >
+                    {engineer.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="form-group">
               <label>Submitted</label>
