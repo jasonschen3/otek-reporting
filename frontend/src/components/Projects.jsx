@@ -7,6 +7,7 @@ import {
   formatUrl,
   checkYesterdayTodayRender,
   getProjectStatus,
+  formatMoney,
 } from "../utils";
 
 function Projects() {
@@ -466,7 +467,7 @@ function Projects() {
                   )}
                 </td>
                 <td>{project.contract_id}</td>
-                <td>{project.amount}</td>
+                <td>{formatMoney(project.amount)}</td>
                 <td className="wider-col">
                   {project.engineer_names.split(", ").map((name, index) => (
                     <span key={index} className="engineer-name">
@@ -677,17 +678,17 @@ function Projects() {
                     {notificationsCount[project.project_id] !== undefined ? (
                       <>
                         {notificationsCount[project.project_id].type1 !== 0 && (
-                          <div>{`${
+                          <div className="highlight">{`${
                             notificationsCount[project.project_id].type1
                           } missing logs`}</div>
                         )}
                         {notificationsCount[project.project_id].type3 !== 0 && (
-                          <div>{`${
+                          <div className="highlight">{`${
                             notificationsCount[project.project_id].type3
                           } missing invoices`}</div>
                         )}
                         {notificationsCount[project.project_id].type2 !== 0 && (
-                          <div>{`${
+                          <div className="highlight">{`${
                             notificationsCount[project.project_id].type2
                           } overdue payments`}</div>
                         )}

@@ -231,3 +231,8 @@ td button {
 #project-table {
   overflow-y: auto;
 }
+
+.highlight {
+  color: red;
+  font-weight: bold;
+}

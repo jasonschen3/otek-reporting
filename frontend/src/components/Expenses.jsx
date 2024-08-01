@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { BACKEND_IP } from "../constants";
+import { formatMoney } from "../utils";
 
 const Expenses = () => {
   const [expenses, setExpenses] = useState([]);
@@ -232,7 +233,7 @@ const Expenses = () => {
                     : "misc"}
                 </td>
                 <td>{expense.expense_details}</td>
-                <td>{expense.amount}</td>
+                <td>{formatMoney(expense.amount)}</td>
                 <td>
                   <button
                     onClick={() => handleDailyLogClick(expense.daily_log_id)}

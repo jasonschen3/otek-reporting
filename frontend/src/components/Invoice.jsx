@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { BACKEND_IP } from "../constants";
-import { formatUrl } from "../utils";
+import { formatUrl, formatMoney } from "../utils";
 
 function Invoices() {
   const [invoices, setInvoices] = useState([]);
@@ -173,7 +173,7 @@ function Invoices() {
                 <td>{invoice.invoice_number}</td>
                 <td>{invoice.invoice_date}</td>
                 <td>{invoice.invoice_terms}</td>
-                <td>{invoice.amount}</td>
+                <td>{formatMoney(invoice.amount)}</td>
                 <td>{invoice.has_paid ? "Yes" : "No"}</td>
                 <td>
                   {invoice.invoice_url && (
