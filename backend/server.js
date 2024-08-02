@@ -163,7 +163,6 @@ app.get("/projects", verifyToken, async (req, res) => {
 });
 
 app.post("/dailyLogs", verifyToken, async (req, res) => {
-  console.log("Post daily log");
   const projectId = req.body.project_id;
   const action = req.body.action;
   const today = new Date();
@@ -544,9 +543,9 @@ app.post(
     try {
       const result = await db.query(
         `UPDATE daily_logs 
-       SET log_date = $1, status_submitted = $2, hours = $3, pdf_url = $4, num_engineers = $5, note = $6, engineer_id = $7
-       WHERE daily_log_id = $8
-       RETURNING *`,
+         SET log_date = $1, status_submitted = $2, hours = $3, pdf_url = $4, num_engineers = $5, note = $6, engineer_id = $7
+         WHERE daily_log_id = $8
+         RETURNING *`,
         [
           log_date,
           status_submitted,

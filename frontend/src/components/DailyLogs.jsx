@@ -11,6 +11,7 @@ const DailyLogs = () => {
   const [editDailyLog, setEditDailyLog] = useState(null);
   const [permissionLevel, setPermissionLevel] = useState(0);
   const [engineers, setEngineers] = useState([]);
+  const [engineerMap, setEngineerMap] = useState({});
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -68,13 +69,19 @@ const DailyLogs = () => {
         console.error("Error fetching project name:", error);
       }
     };
+
     const fetchEngineers = async () => {
       try {
         const response = await axios.get(`${BACKEND_IP}/engineers`, {
           params: { project_id: projectId },
           headers: { "access-token": token },
-        }); // Adjust the endpoint to your actual API
+        });
         setEngineers(response.data);
+        const map = {};
+        response.data.forEach((engineer) => {
+          map[engineer.name] = engineer.engineer_id;
+        });
+        setEngineerMap(map);
       } catch (error) {
         console.error("Error fetching engineers:", error);
       }
@@ -153,7 +160,10 @@ const DailyLogs = () => {
 
   const handleEditClick = (log) => {
     if (permissionLevel >= 2) {
-      setEditDailyLog({ ...log });
+      setEditDailyLog({
+        ...log,
+        engineer_id: engineerMap[log.engineer_names] || "", // Set to empty string if no match
+      });
       setTimeout(() => {
         const element = document.getElementById("editLog");
         if (element) {
@@ -192,7 +202,6 @@ const DailyLogs = () => {
           )
         );
         setEditDailyLog(null);
-        window.location.href = "/dailyLogs";
       } else {
         console.error("Failed to update daily log");
       }
@@ -304,10 +313,11 @@ const DailyLogs = () => {
               <label>Engineer</label>
               <select
                 name="engineer_id"
-                value={editDailyLog.engineer_id}
+                value={editDailyLog.engineer_id || ""}
                 onChange={handleChange}
                 className="form-control"
               >
+                <option value="">Select an engineer</option>
                 {engineers.map((engineer) => (
                   <option
                     key={engineer.engineer_id}
