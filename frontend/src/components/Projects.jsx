@@ -21,6 +21,7 @@ function Projects() {
   const [companies, setCompanies] = useState([]);
   const [displayStatus, setDisplayStatus] = useState(5); // Default to All
   const [selectedCompany, setSelectedCompany] = useState(""); // State for selected company
+  const [totalAmount, setTotalAmount] = useState(0);
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -44,6 +45,7 @@ function Projects() {
       })
       .then((res) => {
         setProjects(res.data);
+        calculateTotalAmount(res.data);
         return axios.all([
           axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=false`, {
             headers: { "access-token": token },
@@ -126,6 +128,7 @@ function Projects() {
       });
 
       setProjects(projectsResponse.data);
+      calculateTotalAmount(projectsResponse.data);
 
       const [entriesRes, expensesRes] = await axios.all([
         axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=false`, {
@@ -159,6 +162,7 @@ function Projects() {
       console.error("Error fetching projects:", error);
     }
   };
+
   const fetchNotificationsCount = async (projectId) => {
     try {
       const response = await axios.get(`${BACKEND_IP}/notifications`, {
@@ -317,10 +321,17 @@ function Projects() {
           )
         : projectsResponse.data;
       setProjects(filteredProjects);
-      console.log(filteredProjects, " FILTERED PROJECTS");
+      calculateTotalAmount(filteredProjects);
     } catch (error) {
       console.error("Error filtering projects by company:", error);
     }
+  };
+  const calculateTotalAmount = (projects) => {
+    const total = projects.reduce(
+      (sum, project) => sum + Number(project.amount || 0),
+      0
+    );
+    setTotalAmount(total);
   };
 
   const navigateTo = (path, state) => {
@@ -729,6 +740,15 @@ function Projects() {
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr>
+              <td colSpan="11" style={{ textAlign: "right" }}>
+                <strong>Total Amount:</strong>
+              </td>
+              <td>{formatMoney(totalAmount)}</td>
+              <td colSpan="7"></td>
+            </tr>
+          </tfoot>
         </table>
         {editProject && (
           <div id="editProject" className="edit-form">
