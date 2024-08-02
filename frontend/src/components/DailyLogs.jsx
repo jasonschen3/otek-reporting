@@ -202,6 +202,7 @@ const DailyLogs = () => {
           )
         );
         setEditDailyLog(null);
+        window.location.reload();
       } else {
         console.error("Failed to update daily log");
       }
