@@ -1189,8 +1189,11 @@ const checkAndUpdateNotifications = async () => {
         `SELECT invoice_date, has_paid, amount FROM invoices WHERE project_id = $1`,
         [project_id]
       );
-      // Check for invoices where payment has not been received after 30 days
+
+      // Calculate the total unpaid amount for invoices that are overdue by 30 days for type 4
+      let totalUnpaidAmount = 0;
       const now = new Date();
+
       for (const invoice of invoiceResult.rows) {
         if (invoice.amount == 0) {
           continue;
@@ -1202,6 +1205,7 @@ const checkAndUpdateNotifications = async () => {
           );
 
           if (diffDays > 30) {
+            totalUnpaidAmount += Number(invoice.amount);
             await db.query(
               "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
               [
@@ -1214,6 +1218,22 @@ const checkAndUpdateNotifications = async () => {
           }
         }
       }
+
+      // Type 4: Add a new notification for the total unpaid amount if it exists
+      if (totalUnpaidAmount > 0) {
+        await db.query(
+          "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
+          [
+            4, // New notification type for total unpaid amount
+            new Date(),
+            `Total unpaid amount for invoices overdue by 30 days is $${totalUnpaidAmount.toFixed(
+              2
+            )}`,
+            project_id,
+          ]
+        );
+      }
+
       // Noti type 3: Missing invoice, 30 days an invoice remind after 30
       // Calculate the number of invoices required based on the project duration
       const invoiceInterval = 30; // 30 days per invoice
@@ -1334,7 +1354,8 @@ app.get("/invoices", (req, res) => {
       include_logs,
       note
     FROM invoices
-    WHERE project_id = $1`;
+    WHERE project_id = $1
+    ORDER BY invoice_date`;
 
   const values = [project_id];
 

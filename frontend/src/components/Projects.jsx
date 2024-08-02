@@ -169,6 +169,7 @@ function Projects() {
         params: { project_id: projectId },
         headers: { "access-token": token },
       });
+
       const type1Count = response.data.filter(
         (noti) => noti.noti_type === 1
       ).length;
@@ -178,12 +179,27 @@ function Projects() {
       const type3Count = response.data.filter(
         (noti) => noti.noti_type === 3
       ).length;
+
+      // Get the total amount directly from the Type 4 notifications
+      const type4Notification = response.data.find(
+        (noti) => noti.noti_type === 4
+      );
+
+      let type4Amount = 0;
+      if (type4Notification) {
+        const amountMatch =
+          type4Notification.noti_message.match(/\$\d+(\.\d{2})?/);
+        type4Amount = amountMatch[0];
+      }
+
+      console.log(type4Amount);
       setNotificationsCount((prev) => ({
         ...prev,
         [projectId]: {
           type1: type1Count,
           type2: type2Count,
           type3: type3Count,
+          type4: type4Amount, // Store the amount directly
         },
       }));
     } catch (error) {
@@ -703,11 +719,17 @@ function Projects() {
                             notificationsCount[project.project_id].type2
                           } overdue payments`}</div>
                         )}
+                        {notificationsCount[project.project_id].type4 !== 0 && (
+                          <div className="highlight">{`${
+                            notificationsCount[project.project_id].type4
+                          } total unpaid`}</div>
+                        )}
                       </>
                     ) : (
                       ""
                     )}
                   </div>
+
                   <button
                     onClick={() =>
                       navigateTo("/notifications", { project: project })
