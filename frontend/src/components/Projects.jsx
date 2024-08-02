@@ -191,6 +191,9 @@ function Projects() {
           type4Notification.noti_message.match(/\$\d+(\.\d{2})?/);
         type4Amount = amountMatch[0];
       }
+      const type5Count = response.data.filter(
+        (noti) => noti.noti_type === 5
+      ).length;
 
       console.log(type4Amount);
       setNotificationsCount((prev) => ({
@@ -200,6 +203,7 @@ function Projects() {
           type2: type2Count,
           type3: type3Count,
           type4: type4Amount, // Store the amount directly
+          type5: type5Count,
         },
       }));
     } catch (error) {
@@ -723,6 +727,9 @@ function Projects() {
                           <div className="highlight">{`${
                             notificationsCount[project.project_id].type4
                           } total unpaid`}</div>
+                        )}
+                        {notificationsCount[project.project_id].type5 !== 0 && (
+                          <div className="highlight">{`Error: end date should not be before start date`}</div>
                         )}
                       </>
                     ) : (

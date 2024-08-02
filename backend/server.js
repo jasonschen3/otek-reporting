@@ -144,7 +144,7 @@ app.get("/projects", verifyToken, async (req, res) => {
     GROUP BY 
       p.project_id, p.project_name, p.project_status, p.start_date, p.end_date, p.details, p.location, p.quotation_url, p.purchase_url, p.amount, p.contract_id, p.otek_invoice, p.company_name, p.project_number
     ORDER BY 
-      p.company_name ASC, p.project_number;
+      p.company_name ASC, p.project_number, p.project_name;
   `);
     let projectsInfo = allProjects.rows;
 
@@ -1126,10 +1126,12 @@ const checkAndUpdateNotifications = async () => {
     await db.query("DELETE FROM notifications");
 
     // Fetch all projects
-    const projects = await db.query("SELECT project_id FROM projects");
+    const projects = await db.query(
+      "SELECT project_id, project_name FROM projects"
+    );
 
     for (const project of projects.rows) {
-      const { project_id } = project;
+      const { project_id, project_name } = project;
 
       // Type 1: Check for missing daily logs
       const projectResult = await db.query(
@@ -1145,13 +1147,54 @@ const checkAndUpdateNotifications = async () => {
       }
 
       const startDate = new Date(projectResult.rows[0].start_date);
-      const endDate = projectResult.rows[0].end_date
+      const now = new Date();
+      let endDate = projectResult.rows[0].end_date
         ? new Date(projectResult.rows[0].end_date)
-        : new Date();
+        : now;
+
+      // Type 5: Alert if end date is before start date
+      if (endDate < startDate) {
+        await db.query(
+          "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
+          [
+            5, // New notification type for end date before start date
+            new Date(),
+            `End date ${
+              endDate.toISOString().split("T")[0]
+            } is before start date ${
+              startDate.toISOString().split("T")[0]
+            } for project ${projectResult.rows[0].project_name}`,
+            project_id,
+          ]
+        );
+        // Skip further processing for this project
+        continue;
+      }
+
+      // Exit if start date is in the future
+      if (startDate > now) {
+        continue;
+      }
+
+      // Use today's date if end_date is in the future
+      if (!endDate || endDate > now) {
+        // console.log("enddate change ", endDate);
+        endDate = now;
+      }
 
       const totalDays =
         Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
+      // console.log(
+      //   "total days ",
+      //   totalDays,
+      //   " project name ",
+      //   project_name,
+      //   " start date",
+      //   startDate,
+      //   " endate ",
+      //   endDate
+      // );
       const dailyLogResult = await db.query(
         `SELECT log_date, status_submitted, hours FROM daily_logs WHERE project_id = $1`,
         [project_id]
@@ -1192,7 +1235,6 @@ const checkAndUpdateNotifications = async () => {
 
       // Calculate the total unpaid amount for invoices that are overdue by 30 days for type 4
       let totalUnpaidAmount = 0;
-      const now = new Date();
 
       for (const invoice of invoiceResult.rows) {
         if (invoice.amount == 0) {
@@ -1234,8 +1276,7 @@ const checkAndUpdateNotifications = async () => {
         );
       }
 
-      // Noti type 3: Missing invoice, 30 days an invoice remind after 30
-      // Calculate the number of invoices required based on the project duration
+      // Noti type 3: Missing invoice, notify every 30 days
       const invoiceInterval = 30; // 30 days per invoice
       const reqNumberOfInvoices = Math.ceil(totalDays / invoiceInterval);
 
@@ -1248,14 +1289,17 @@ const checkAndUpdateNotifications = async () => {
       const missingInvoices = reqNumberOfInvoices - currInvoices;
 
       for (let i = 0; i < missingInvoices; i++) {
-        const notificationDate = projectResult.rows[0].end_date
-          ? new Date(projectResult.rows[0].end_date)
-          : new Date();
+        // Calculate the due date for each missing invoice. Due date is 30 days after each month gone by
+        const dueDate = new Date(startDate);
+        dueDate.setDate(dueDate.getDate() + (i + 1) * invoiceInterval);
 
-        await db.query(
-          "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
-          [3, notificationDate, `Invoice required`, project_id]
-        );
+        // Only notify if the due date is overdue by 30 days, endDate is set to now if end_date of project is later or dne
+        if (now > dueDate) {
+          await db.query(
+            "INSERT INTO notifications (noti_type, noti_related_date, noti_message, project_id) VALUES ($1, $2, $3, $4)",
+            [3, now, `Invoice required`, project_id]
+          );
+        }
       }
     }
     console.log("Notifications refreshed");
