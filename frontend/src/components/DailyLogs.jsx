@@ -248,7 +248,7 @@ const DailyLogs = () => {
                 </td>
                 <td>{log.status_submitted === "1" ? "Yes" : "No"}</td>
                 <td>{log.num_engineers}</td>
-                <td>{log.hours}</td>
+                <td>{log.hours !== "0.00" && log.hours}</td>
                 <td>
                   {log.pdf_url && (
                     <a
