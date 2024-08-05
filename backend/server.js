@@ -116,7 +116,7 @@ app.get("/", async (req, res) => {
 });
 
 app.get("/projects", verifyToken, async (req, res) => {
-  const { projectDisplayStatus } = req.query;
+  const { projectDisplayStatus, selectedCompanyName } = req.query;
   try {
     const allProjects = await db.query(`
     SELECT 
@@ -152,6 +152,11 @@ app.get("/projects", verifyToken, async (req, res) => {
       const status = parseInt(projectDisplayStatus, 10);
       projectsInfo = projectsInfo.filter(
         (project) => project.project_status === status
+      );
+    }
+    if (selectedCompanyName !== "All") {
+      projectsInfo = projectsInfo.filter(
+        (project) => project.company_name === selectedCompanyName
       );
     }
 

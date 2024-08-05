@@ -20,7 +20,7 @@ function Projects() {
   const [permissionLevel, setPermissionLevel] = useState(0);
   const [companies, setCompanies] = useState([]);
   const [displayStatus, setDisplayStatus] = useState(5); // Default to All
-  const [selectedCompany, setSelectedCompany] = useState(""); // State for selected company
+  const [selectedCompany, setSelectedCompany] = useState("All"); // State for selected company
   const [totalAmount, setTotalAmount] = useState(0);
 
   const bottomRef = useRef(null);
@@ -34,80 +34,7 @@ function Projects() {
     }
     const decoded = jwtDecode(token);
     setPermissionLevel(decoded.permission_level);
-
-    axios
-      .get(`${BACKEND_IP}/projects`, {
-        headers: {
-          "access-token": token,
-        },
-        params: {
-          projectDisplayStatus: displayStatus,
-        },
-      })
-      .then((res) => {
-        setProjects(res.data);
-        calculateTotalAmount(res.data);
-        return axios.all([
-          axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=false`, {
-            headers: { "access-token": token },
-          }),
-          axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=true`, {
-            headers: { "access-token": token },
-          }),
-          axios.get(`${BACKEND_IP}/latestInvoiceDate`, {
-            headers: { "access-token": token },
-          }),
-        ]);
-      })
-      .then(
-        axios.spread((entriesRes, expensesRes, invoiceRes) => {
-          const entriesStatusData = entriesRes.data.reduce((acc, status) => {
-            acc[status.project_id] = {
-              today: status.today,
-              yesterday: status.yesterday,
-              end_date: status.end_date_status,
-            };
-            return acc;
-          }, {});
-          setEntriesStatus(entriesStatusData);
-
-          const expensesStatusData = expensesRes.data.reduce((acc, status) => {
-            acc[status.project_id] = {
-              today: status.today,
-              yesterday: status.yesterday,
-              end_date: status.end_date_status,
-            };
-            return acc;
-          }, {});
-          setExpensesStatus(expensesStatusData);
-
-          const latestInvoiceDatesData = invoiceRes.data.reduce(
-            (acc, invoice) => {
-              acc[invoice.project_id] = invoice.latest_invoice_date;
-              return acc;
-            },
-            {}
-          );
-          setLatestInvoiceDates(latestInvoiceDatesData);
-        })
-      )
-      .catch((err) => {
-        console.error("Error fetching project data:", err);
-        if (err.response && err.response.status === 401) {
-          navigate("/login");
-        }
-      });
-
-    const fetchCompanies = async () => {
-      try {
-        const res = await axios.get(`${BACKEND_IP}/allCompanies`, {
-          headers: { "access-token": token },
-        });
-        setCompanies(res.data);
-      } catch (error) {
-        console.error("There was an error fetching the companies data", error);
-      }
-    };
+    fetchProjects(displayStatus, selectedCompany);
     fetchCompanies();
   }, [navigate, token]);
 
@@ -117,7 +44,18 @@ function Projects() {
     });
   }, [projects]);
 
-  const fetchProjects = async (status) => {
+  const fetchCompanies = async () => {
+    try {
+      const res = await axios.get(`${BACKEND_IP}/allCompanies`, {
+        headers: { "access-token": token },
+      });
+      setCompanies(res.data);
+    } catch (error) {
+      console.error("There was an error fetching the companies data", error);
+    }
+  };
+
+  const fetchProjects = async (status, selectedCompany) => {
     try {
       const projectsResponse = await axios.get(`${BACKEND_IP}/projects`, {
         headers: {
@@ -125,6 +63,7 @@ function Projects() {
         },
         params: {
           projectDisplayStatus: status,
+          selectedCompanyName: selectedCompany,
         },
       });
 
@@ -196,7 +135,6 @@ function Projects() {
         (noti) => noti.noti_type === 5
       ).length;
 
-      console.log(type4Amount);
       setNotificationsCount((prev) => ({
         ...prev,
         [projectId]: {
@@ -291,6 +229,7 @@ function Projects() {
           headers: { "access-token": token },
           params: {
             projectDisplayStatus: displayStatus,
+            selectedCompanyName: selectedCompany,
           },
         });
         if (response.status === 200) {
@@ -312,40 +251,14 @@ function Projects() {
   const handleDisplayChange = async (e) => {
     const newStatus = parseInt(e.target.value);
     setDisplayStatus(newStatus);
-
-    try {
-      await axios.post(
-        `${BACKEND_IP}/updateProjectDisplay`,
-        { status: newStatus },
-        {
-          headers: { "access-token": token },
-        }
-      );
-    } catch (error) {
-      console.error("Error updating project display status:", error);
-    }
-
-    fetchProjects(newStatus);
+    await fetchProjects(newStatus, selectedCompany);
   };
 
   const handleCompanyChange = async (e) => {
     const selectedCompanyName = e.target.value;
     setSelectedCompany(selectedCompanyName);
-
-    try {
-      const projectsResponse = await axios.get(`${BACKEND_IP}/projects`, {
-        headers: { "access-token": token },
-      });
-      const filteredProjects = selectedCompanyName
-        ? projectsResponse.data.filter(
-            (project) => project.company_name === selectedCompanyName
-          )
-        : projectsResponse.data;
-      setProjects(filteredProjects);
-      calculateTotalAmount(filteredProjects);
-    } catch (error) {
-      console.error("Error filtering projects by company:", error);
-    }
+    await fetchProjects(displayStatus, selectedCompanyName);
+    calculateTotalAmount(projects);
   };
 
   const calculateTotalAmount = (projects) => {
@@ -398,7 +311,7 @@ function Projects() {
                 onChange={handleCompanyChange}
                 className="form-control"
               >
-                <option value="">All Companies</option>
+                <option value="All">All Companies</option>
                 {companies.map((company) => (
                   <option key={company.company_id} value={company.company_name}>
                     {company.company_name}

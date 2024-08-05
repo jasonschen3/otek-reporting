@@ -236,3 +236,7 @@ td button {
   color: red;
   font-weight: bold;
 }
+
+.notification-list {
+  text-align: left; /* Ensure text is aligned left */
+}
