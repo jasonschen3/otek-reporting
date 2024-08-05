@@ -17,7 +17,7 @@ import Notifications from "./components/Notifications";
 import AddEngineers from "./components/AddEngineers";
 import Invoices from "./components/Invoice";
 import AddInvoice from "./components/AddInvoice";
-import AddCompany from "./components/AddEngineers";
+import AddCompany from "./components/AddCompany";
 import ManageEngineers from "./components/ManageEngineers";
 import ManageCompanies from "./components/ManageCompanies";
 

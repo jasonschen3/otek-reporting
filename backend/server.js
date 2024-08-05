@@ -1178,23 +1178,11 @@ const checkAndUpdateNotifications = async () => {
 
       // Use today's date if end_date is in the future
       if (!endDate || endDate > now) {
-        // console.log("enddate change ", endDate);
         endDate = now;
       }
 
       const totalDays =
         Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-
-      // console.log(
-      //   "total days ",
-      //   totalDays,
-      //   " project name ",
-      //   project_name,
-      //   " start date",
-      //   startDate,
-      //   " endate ",
-      //   endDate
-      // );
       const dailyLogResult = await db.query(
         `SELECT log_date, status_submitted, hours FROM daily_logs WHERE project_id = $1`,
         [project_id]

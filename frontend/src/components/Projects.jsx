@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
@@ -23,6 +23,7 @@ function Projects() {
   const [selectedCompany, setSelectedCompany] = useState(""); // State for selected company
   const [totalAmount, setTotalAmount] = useState(0);
 
+  const bottomRef = useRef(null);
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
@@ -346,6 +347,7 @@ function Projects() {
       console.error("Error filtering projects by company:", error);
     }
   };
+
   const calculateTotalAmount = (projects) => {
     const total = projects.reduce(
       (sum, project) => sum + Number(project.amount || 0),
@@ -356,6 +358,10 @@ function Projects() {
 
   const navigateTo = (path, state) => {
     navigate(path, { state });
+  };
+
+  const handleScrollToBottom = () => {
+    bottomRef.current.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
@@ -400,6 +406,12 @@ function Projects() {
                 ))}
               </select>
             </form>
+          </div>
+          <div>
+            <br />
+            <button className="btn btn-primary" onClick={handleScrollToBottom}>
+              Scroll to Bottom
+            </button>
           </div>
         </div>
         <div>
@@ -707,31 +719,42 @@ function Projects() {
                 <td className="wider-col">
                   <div>
                     {notificationsCount[project.project_id] !== undefined ? (
-                      <>
+                      <ul className="notification-list">
                         {notificationsCount[project.project_id].type1 !== 0 && (
-                          <div className="highlight">{`${
+                          <li className="highlight">{`${
                             notificationsCount[project.project_id].type1
-                          } missing logs`}</div>
+                          } missing logs`}</li>
                         )}
                         {notificationsCount[project.project_id].type3 !== 0 && (
-                          <div className="highlight">{`${
+                          <li className="highlight">{`${
                             notificationsCount[project.project_id].type3
-                          } missing invoices`}</div>
+                          } missing invoices`}</li>
                         )}
-                        {notificationsCount[project.project_id].type2 !== 0 && (
-                          <div className="highlight">{`${
-                            notificationsCount[project.project_id].type2
-                          } overdue payments`}</div>
-                        )}
-                        {notificationsCount[project.project_id].type4 !== 0 && (
-                          <div className="highlight">{`${
-                            notificationsCount[project.project_id].type4
-                          } total unpaid`}</div>
+                        {(notificationsCount[project.project_id].type2 !== 0 ||
+                          notificationsCount[project.project_id].type4 !==
+                            0) && (
+                          <li className="highlight">
+                            {notificationsCount[project.project_id].type2 !==
+                              0 &&
+                              `${
+                                notificationsCount[project.project_id].type2
+                              } overdue payments`}
+                            {notificationsCount[project.project_id].type2 !==
+                              0 &&
+                              notificationsCount[project.project_id].type4 !==
+                                0 &&
+                              " and "}
+                            {notificationsCount[project.project_id].type4 !==
+                              0 &&
+                              `(${
+                                notificationsCount[project.project_id].type4
+                              } total)`}
+                          </li>
                         )}
                         {notificationsCount[project.project_id].type5 !== 0 && (
-                          <div className="highlight">{`Error: end date should not be before start date`}</div>
+                          <li className="highlight">{`Error: end date should not be before start date`}</li>
                         )}
-                      </>
+                      </ul>
                     ) : (
                       ""
                     )}
@@ -779,6 +802,7 @@ function Projects() {
             </tr>
           </tfoot>
         </table>
+        <div ref={bottomRef}></div>
         {editProject && (
           <div id="editProject" className="edit-form">
             <h2>Edit Project {editProject.project_name}</h2>
