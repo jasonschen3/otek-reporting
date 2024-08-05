@@ -98,6 +98,15 @@ function Projects() {
         return acc;
       }, {});
       setExpensesStatus(expensesStatusData);
+
+      const invoiceRes = await axios.get(`${BACKEND_IP}/latestInvoiceDate`, {
+        headers: { "access-token": token },
+      });
+      const latestInvoiceDatesData = invoiceRes.data.reduce((acc, invoice) => {
+        acc[invoice.project_id] = invoice.latest_invoice_date;
+        return acc;
+      }, {});
+      setLatestInvoiceDates(latestInvoiceDatesData);
     } catch (error) {
       console.error("Error fetching projects:", error);
     }
