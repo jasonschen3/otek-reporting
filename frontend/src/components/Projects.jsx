@@ -174,7 +174,7 @@ function Projects() {
       let type4Amount = 0;
       if (type4Notification) {
         const amountMatch =
-          type4Notification.noti_message.match(/\$\d+(\.\d{2})?/);
+          type4Notification.noti_message.match(/(?<=\$)\d+(\.\d{2})?/);
         type4Amount = amountMatch[0];
       }
       const type5Count = response.data.filter(
@@ -698,16 +698,11 @@ function Projects() {
                               `${
                                 notificationsCount[project.project_id].type2
                               } overdue payments`}
-                            {notificationsCount[project.project_id].type2 !==
-                              0 &&
-                              notificationsCount[project.project_id].type4 !==
-                                0 &&
-                              " and "}
                             {notificationsCount[project.project_id].type4 !==
                               0 &&
-                              `(${
+                              ` (${formatMoney(
                                 notificationsCount[project.project_id].type4
-                              } total)`}
+                              )} total)`}
                           </li>
                         )}
                         {notificationsCount[project.project_id].type5 !== 0 && (
