@@ -21,6 +21,10 @@ export const formatUrl = (url) => {
 
 // Renders end_date or yesterday/today
 export const checkYesterdayTodayRender = (project) => {
+  // 0) Render nothing but view all since completed
+  if (project.project_status === 2) {
+    return 0;
+  }
   // 1) Render everything
   if (project.end_date === null) {
     return 1;

@@ -1123,7 +1123,6 @@ app.get("/projectEntriesStatus", verifyToken, async (req, res) => {
 
 app.get("/notifications", verifyToken, async (req, res) => {
   const { project_id } = req.query;
-  // console.log("Getting noti backend");
   try {
     const result = await db.query(
       `SELECT noti_id, noti_type, TO_CHAR(noti_related_date, 'MM-DD-YYYY') as formatted_date, noti_message
@@ -1160,7 +1159,18 @@ const checkAndUpdateNotifications = async () => {
     );
 
     for (const project of projects.rows) {
+      // Name used for debugging
       const { project_id, project_name } = project;
+
+      // If completed, then no notis
+      const statusQuery = await db.query(
+        "SELECT project_status FROM projects WHERE project_id=$1",
+        [project_id]
+      );
+      // Check for completed status
+      if (statusQuery.rows[0].project_status === 2) {
+        continue;
+      }
 
       // Type 1: Check for missing daily logs
       const projectResult = await db.query(
