@@ -22,6 +22,7 @@ function Projects() {
   const [displayStatus, setDisplayStatus] = useState(5); // Default to All
   const [selectedCompany, setSelectedCompany] = useState("All"); // State for selected company
   const [totalAmount, setTotalAmount] = useState(0);
+  const [totalOverduePayments, setTotalOverduePayments] = useState(0);
 
   const bottomRef = useRef(null);
   const navigate = useNavigate();
@@ -55,6 +56,23 @@ function Projects() {
     }
   };
 
+  const fetchOverduePayments = async (projectID) => {
+    try {
+      const response = await axios.get(`${BACKEND_IP}/overduePayments`, {
+        headers: {
+          "access-token": token,
+        },
+        params: {
+          projectID: projectID,
+        },
+      });
+      console.log("Fetch overdue payments", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching overdue payments:", error);
+    }
+  };
+
   const fetchProjects = async (status, selectedCompany) => {
     try {
       const projectsResponse = await axios.get(`${BACKEND_IP}/projects`, {
@@ -67,8 +85,27 @@ function Projects() {
         },
       });
 
-      setProjects(projectsResponse.data);
-      calculateTotalAmount(projectsResponse.data);
+      const projects = projectsResponse.data;
+      setProjects(projects);
+      calculateTotalAmount(projects);
+
+      const overduePaymentsMap = {};
+
+      // Fetch overdue payments for each project
+      for (const project of projects) {
+        const overduePayments = await fetchOverduePayments(project.project_id);
+        if (overduePayments && overduePayments.length > 0) {
+          overduePaymentsMap[project.project_id] =
+            overduePayments[0].total_overdue || 0;
+        }
+      }
+
+      // Sum up all overdue payments
+      const totalOverduePayments = Object.values(overduePaymentsMap).reduce(
+        (sum, overdue) => sum + Number(overdue),
+        0
+      );
+      setTotalOverduePayments(totalOverduePayments);
 
       const [entriesRes, expensesRes] = await axios.all([
         axios.get(`${BACKEND_IP}/projectEntriesStatus?checkExpenses=false`, {
@@ -720,7 +757,11 @@ function Projects() {
                 <strong>Total Amount:</strong>
               </td>
               <td>{formatMoney(totalAmount)}</td>
-              <td colSpan="7"></td>
+              <td colSpan="7" style={{ textAlign: "right" }}>
+                <strong>
+                  Total Overdue Amount: {formatMoney(totalOverduePayments)}
+                </strong>
+              </td>
             </tr>
           </tfoot>
         </table>

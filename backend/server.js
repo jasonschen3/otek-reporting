@@ -115,6 +115,30 @@ app.get("/", async (req, res) => {
   res.send("Root of server");
 });
 
+app.get("/overduePayments", verifyToken, async (req, res) => {
+  const { projectID } = req.query;
+  try {
+    const overduePayments = await db.query(
+      `
+      SELECT 
+        project_id, 
+        SUM(CAST(SUBSTRING(noti_message FROM '\\$(\\d+(\\.\\d{2})?)') AS DECIMAL)) AS total_overdue
+      FROM 
+        notifications
+      WHERE 
+        noti_type = 4 AND project_id = $1
+      GROUP BY 
+        project_id;
+      `,
+      [projectID]
+    );
+    res.json(overduePayments.rows);
+  } catch (error) {
+    console.error("Error fetching overdue payments:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 app.get("/projects", verifyToken, async (req, res) => {
   const { projectDisplayStatus, selectedCompanyName } = req.query;
   try {
