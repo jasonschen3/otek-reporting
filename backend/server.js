@@ -1587,6 +1587,35 @@ app.get("/latestInvoiceDate", async (req, res) => {
   }
 });
 
+/* Mobile */
+app.get("/projectsMobile", verifyToken, async (req, res) => {
+  const { projectDisplayStatus, selectedCompanyName } = req.query;
+
+  try {
+    const allProjects = await db.query(
+      `SELECT project_id, company_name, project_number, project_status, project_name
+       FROM projects`
+    );
+    let projectsInfo = allProjects.rows;
+
+    if (projectDisplayStatus && projectDisplayStatus !== "5") {
+      const status = parseInt(projectDisplayStatus, 10);
+      projectsInfo = projectsInfo.filter(
+        (project) => project.project_status === status
+      );
+    }
+    if (selectedCompanyName !== "All") {
+      projectsInfo = projectsInfo.filter(
+        (project) => project.company_name === selectedCompanyName
+      );
+    }
+    res.json(projectsInfo);
+  } catch (error) {
+    console.error("Error fetching projects:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
