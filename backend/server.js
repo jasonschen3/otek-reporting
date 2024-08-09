@@ -1588,6 +1588,44 @@ app.get("/latestInvoiceDate", async (req, res) => {
 });
 
 /* Mobile */
+// No expiration for mobile
+function generateMobileToken(user) {
+  const payload = {
+    id: user.id,
+    username: user.username,
+    permission_level: user.permission_level,
+  };
+  console.log("generated");
+  return jwt.sign(payload, secretKey);
+}
+app.post("/loginMobile", async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const result = await db.query("SELECT * FROM users WHERE username = $1", [
+      username,
+    ]);
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      const storedHashedPassword = user.password;
+
+      const valid = await comparePassword(password, storedHashedPassword);
+      if (valid) {
+        const token = generateMobileToken(user);
+        console.log("Valid ", token);
+        return res.status(200).json({ token });
+      } else {
+        return res.status(401).send("Invalid credentials");
+      }
+    } else {
+      return res.status(401).send("Invalid credentials");
+    }
+  } catch (err) {
+    console.error("Error during login:", err);
+    return res.status(500).send("Internal server error");
+  }
+});
+
 app.get("/projectsMobile", verifyToken, async (req, res) => {
   const { projectDisplayStatus, selectedCompanyName } = req.query;
 

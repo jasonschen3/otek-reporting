@@ -241,3 +241,21 @@ td button {
 .notification-list {
   text-align: left; /* Ensure text is aligned left */
 }
+
+.custom-arrow {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #888;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.custom-select-wrapper {
+  position: relative;
+  width: 100%;
+}

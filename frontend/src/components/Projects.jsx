@@ -328,10 +328,12 @@ function Projects() {
       <h1>Projects Report</h1>
       <div className="subheading">
         <div className="status-container">
-          <div>
+          <div className="custom-select-wrapper">
             <form>
-              <div className="form-group">
-                <label htmlFor="projectStatusSelect">Project Status</label>
+              <div className="form-group ">
+                <label htmlFor="projectStatusSelect custom-select-wrapper">
+                  Project Status
+                </label>
                 <select
                   id="projectStatusSelect"
                   value={displayStatus}
@@ -345,10 +347,11 @@ function Projects() {
                   <option value={3}>Bill Submitted</option>
                   <option value={4}>To Be Submitted</option>
                 </select>
+                <span className="custom-arrow"></span>
               </div>
             </form>
           </div>
-          <div className="form-group">
+          <div className="form-group custom-select-wrapper">
             <form>
               <label htmlFor="companySelect">Company</label>
               <select
@@ -364,6 +367,7 @@ function Projects() {
                   </option>
                 ))}
               </select>
+              <span className="custom-arrow"></span>
             </form>
           </div>
           <div>
