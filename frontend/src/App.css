@@ -4,11 +4,12 @@
   --color3: #52796f;
   --color4: #84a98c;
   --color5: #cad2c5;
+  --main-background: #e0f7fa;
 }
 
 body {
   font-family: Arial, sans-serif;
-  background-color: #e0f7fa;
+  background-color: var(--main-background);
   margin: 0;
   padding: 0;
 }

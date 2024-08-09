@@ -369,7 +369,7 @@ function Projects() {
           <div>
             <br />
             <button className="btn btn-primary" onClick={handleScrollToBottom}>
-              Scroll to Bottom
+              Bottom
             </button>
           </div>
         </div>
@@ -752,10 +752,11 @@ function Projects() {
                 <strong>Total Amount:</strong>
               </td>
               <td>{formatMoney(totalAmount)}</td>
-              <td colSpan="7" style={{ textAlign: "right" }}>
-                <strong>
-                  Total Overdue Amount: {formatMoney(totalOverduePayments)}
-                </strong>
+              <td colSpan="6" style={{ textAlign: "right" }}>
+                <strong>Total</strong>
+              </td>
+              <td colSpan="1" style={{ textAlign: "left" }}>
+                {formatMoney(totalOverduePayments)}
               </td>
             </tr>
           </tfoot>
