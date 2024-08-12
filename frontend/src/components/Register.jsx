@@ -6,7 +6,10 @@ import { BACKEND_IP } from "../constants";
 function Register() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [permissionLevel, setPermissionLevel] = useState(0);
+  const [permissionLevel, setPermissionLevel] = useState();
+  const [engineerName, setEngineerName] = useState("");
+  const [engineerTitle, setEngineerTitle] = useState("");
+  const [uploadUrl, setUploadUrl] = useState("");
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -16,7 +19,7 @@ function Register() {
       navigate("/unauthorized");
       return;
     }
-  });
+  }, [token, navigate]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -28,6 +31,9 @@ function Register() {
           username: username,
           password: password,
           permission_level: permissionLevel,
+          name: engineerName,
+          title: engineerTitle,
+          upload_url: uploadUrl,
         },
         { headers: { "access-token": token } }
       );
@@ -48,9 +54,11 @@ function Register() {
       }
     }
   };
+
   function handleCancel() {
     navigate(-1);
   }
+
   return (
     <div className="container mt-5">
       <h1>Register</h1>
@@ -62,7 +70,7 @@ function Register() {
                 <div className="form-group">
                   <label htmlFor="username">Username</label>
                   <input
-                    type="username"
+                    type="text"
                     className="form-control"
                     name="username"
                     value={username}
@@ -94,6 +102,39 @@ function Register() {
                     <option value={1}>Upload Only</option>
                     <option value={2}>Admin</option>
                   </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="engineerName">Engineer Name</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    name="engineerName"
+                    value={engineerName}
+                    onChange={(e) => setEngineerName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="engineerTitle">Engineer Title</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    name="engineerTitle"
+                    value={engineerTitle}
+                    onChange={(e) => setEngineerTitle(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="uploadUrl">Upload URL</label>
+                  <input
+                    type="url"
+                    className="form-control"
+                    name="uploadUrl"
+                    value={uploadUrl}
+                    onChange={(e) => setUploadUrl(e.target.value)}
+                    required
+                  />
                 </div>
                 <br />
                 <button type="submit" className="btn btn-primary">

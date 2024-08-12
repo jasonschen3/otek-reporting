@@ -13,14 +13,14 @@ function AddExpense() {
     amount: null,
     daily_log_id: null,
     engineer_id: null,
-    is_billable: false,
+    is_billable: true,
     status1: false,
     status2: false,
     status3: false,
     pdf_url: null,
   });
   const [engineers, setEngineers] = useState([]);
-  const [dailyLogs, setDailyLogs] = useState([]);
+  // const [dailyLogs, setDailyLogs] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
 
   const location = useLocation();
@@ -49,24 +49,23 @@ function AddExpense() {
   }, [nav]);
 
   useEffect(() => {
-    if (selectedDate) {
-      const fetchDailyLogs = async () => {
-        try {
-          const res = await axios.get(`${BACKEND_IP}/dailyLogs`, {
-            params: { projectId, date: selectedDate },
-            headers: { "access-token": token },
-          });
-          setDailyLogs(res.data);
-        } catch (error) {
-          console.error(
-            "There was an error fetching the daily logs data",
-            error
-          );
-        }
-      };
-
-      fetchDailyLogs();
-    }
+    // if (selectedDate) {
+    //   const fetchDailyLogs = async () => {
+    //     try {
+    //       const res = await axios.get(`${BACKEND_IP}/dailyLogs`, {
+    //         params: { projectId, date: selectedDate },
+    //         headers: { "access-token": token },
+    //       });
+    //       setDailyLogs(res.data);
+    //     } catch (error) {
+    //       console.error(
+    //         "There was an error fetching the daily logs data",
+    //         error
+    //       );
+    //     }
+    //   };
+    //   fetchDailyLogs();
+    // }
   }, [projectId, selectedDate]);
 
   const handleNewExpenseChange = (e) => {
@@ -91,6 +90,7 @@ function AddExpense() {
         ? parseInt(newExpense.engineer_id)
         : null,
       is_billable: newExpense.is_billable ? 1 : 0,
+      // Below are hidden
       status1: newExpense.status1 ? 1 : 0,
       status2: newExpense.status2 ? 1 : 0,
       status3: newExpense.status3 ? 1 : 0,
@@ -179,7 +179,7 @@ function AddExpense() {
           required
         />
       </div>
-      <div className="form-group">
+      {/* <div className="form-group">
         <label>Select Date for Daily Log</label>
         <input
           type="date"
@@ -187,8 +187,8 @@ function AddExpense() {
           onChange={(e) => setSelectedDate(e.target.value)}
           className="form-control"
         />
-      </div>
-      <div className="form-group">
+      </div> */}
+      {/* <div className="form-group">
         <label>Daily Log</label>
         <select
           name="daily_log_id"
@@ -203,7 +203,7 @@ function AddExpense() {
             </option>
           ))}
         </select>
-      </div>
+      </div> */}
       <div className="form-group">
         <label>Engineer</label>
         <select
@@ -230,7 +230,7 @@ function AddExpense() {
           onChange={handleNewExpenseChange}
         />
       </div>
-      <div className="form-group">
+      {/* <div className="form-group">
         <label>Status 1 (Submitted to Other Company)</label>
         <input
           type="checkbox"
@@ -256,7 +256,7 @@ function AddExpense() {
           checked={newExpense.status3}
           onChange={handleNewExpenseChange}
         />
-      </div>
+      </div> */}
       <div className="form-group">
         <label>PDF URL</label>
         <input

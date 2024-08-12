@@ -127,15 +127,15 @@ const Expenses = () => {
     }
   };
 
-  const handleDailyLogClick = (dailyLogId) => {
-    navigate("/dailyLogs", {
-      state: {
-        projectId: project.project_id,
-        action: "View All",
-        highlightLogId: dailyLogId,
-      },
-    });
-  };
+  // const handleDailyLogClick = (dailyLogId) => {
+  //   navigate("/dailyLogs", {
+  //     state: {
+  //       projectId: project.project_id,
+  //       action: "View All",
+  //       highlightLogId: dailyLogId,
+  //     },
+  //   });
+  // };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -204,13 +204,13 @@ const Expenses = () => {
             <th>Expense Type</th>
             <th>Expense Details</th>
             <th>Amount</th>
-            <th>Daily Log ID</th>
+            {/* <th>Daily Log ID</th> */}
             <th>Engineer Name</th>
             <th>Is Billable</th>
-            <th>Submitted to Other Company</th>
-            <th>Other Company Paid</th>
-            <th>Reimbursed to Engineer</th>
-            <th>PDF</th>
+            {/* <th>Submitted to Other Company</th> */}
+            {/* <th>Other Company Paid</th> */}
+            {/* <th>Reimbursed to Engineer</th> */}
+            <th>URL</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -234,7 +234,7 @@ const Expenses = () => {
                 </td>
                 <td>{expense.expense_details}</td>
                 <td>{formatMoney(expense.amount)}</td>
-                <td>
+                {/* <td>
                   <button
                     onClick={() => handleDailyLogClick(expense.daily_log_id)}
                     className="btn btn-link"
@@ -242,12 +242,12 @@ const Expenses = () => {
                   >
                     {expense.daily_log_id}
                   </button>
-                </td>
+                </td> */}
                 <td>{expense.engineer_name}</td>
                 <td>{expense.is_billable === "1" ? "Yes" : "No"}</td>
-                <td>{expense.status1 === "1" ? "Yes" : "No"}</td>
+                {/* <td>{expense.status1 === "1" ? "Yes" : "No"}</td>
                 <td>{expense.status2 === "1" ? "Yes" : "No"}</td>
-                <td>{expense.status3 === "1" ? "Yes" : "No"}</td>
+                <td>{expense.status3 === "1" ? "Yes" : "No"}</td> */}
                 <td>
                   {expense.pdf_url && (
                     <a
@@ -347,7 +347,7 @@ const Expenses = () => {
                 <option value="0">No</option>
               </select>
             </div>
-            <div className="form-group">
+            {/* <div className="form-group">
               <label>Submitted to Other Company</label>
               <select
                 name="status1"
@@ -358,8 +358,8 @@ const Expenses = () => {
                 <option value="1">Yes</option>
                 <option value="0">No</option>
               </select>
-            </div>
-            <div className="form-group">
+            </div> */}
+            {/* <div className="form-group">
               <label>Other Company Paid</label>
               <select
                 name="status2"
@@ -370,8 +370,8 @@ const Expenses = () => {
                 <option value="1">Yes</option>
                 <option value="0">No</option>
               </select>
-            </div>
-            <div className="form-group">
+            </div> */}
+            {/* <div className="form-group">
               <label>Reimbursed to Engineer</label>
               <select
                 name="status3"
@@ -382,7 +382,7 @@ const Expenses = () => {
                 <option value="1">Yes</option>
                 <option value="0">No</option>
               </select>
-            </div>
+            </div> */}
             <div className="form-group">
               <label>PDF URL</label>
               <input

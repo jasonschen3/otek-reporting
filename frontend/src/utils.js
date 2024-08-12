@@ -74,3 +74,16 @@ export const formatMoney = (amount) => {
 
   return `$${parts.join(".")}`;
 };
+
+export const getPermissionLevelText = (level) => {
+  switch (level) {
+    case 0:
+      return "View Only";
+    case 1:
+      return "Upload Only";
+    case 2:
+      return "Admin";
+    default:
+      return "Unknown";
+  }
+};

@@ -79,9 +79,10 @@ app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    const result = await db.query("SELECT * FROM users WHERE username = $1", [
-      username,
-    ]);
+    const result = await db.query(
+      "SELECT * FROM engineers WHERE username = $1",
+      [username]
+    );
     if (result.rows.length > 0) {
       const user = result.rows[0];
       const storedHashedPassword = user.password;
@@ -298,7 +299,6 @@ app.post("/expenses", verifyToken, async (req, res) => {
     console.error("Error fetching end date:", error);
     return res.status(500).send("Error fetching end date");
   }
-  console.log(projectId);
   let currExpensesInfo = null;
   try {
     const baseQuery = `
@@ -345,7 +345,7 @@ app.post("/expenses", verifyToken, async (req, res) => {
         [projectId, endDate]
       );
     }
-    console.log(currExpensesInfo.rows);
+    // console.log(currExpensesInfo.rows);
     res.json(currExpensesInfo.rows);
   } catch (error) {
     console.log("Error fetching expenses", error);
@@ -357,12 +357,13 @@ app.post(
   verifyToken,
   checkPermissionLevel(2),
   async (req, res) => {
-    const { username, password, permission_level } = req.body;
+    const { username, password, permission_level, name, title, upload_url } =
+      req.body;
 
     try {
-      // Check if the username already exists
+      // Check if the username already exists in the engineers table
       const checkResult = await db.query(
-        "SELECT * FROM users WHERE username = $1",
+        "SELECT * FROM engineers WHERE username = $1",
         [username]
       );
 
@@ -370,21 +371,23 @@ app.post(
         return res.status(409).json({ message: "Username already exists" });
       }
 
+      // Hash the password
       bcrypt.hash(password, saltRounds, async (err, hash) => {
         if (err) {
           console.error("Error hashing password:", err);
           return res.status(500).json({ message: "Error hashing password" });
         }
 
-        const result = await db.query(
-          "INSERT INTO users (username, password, permission_level) VALUES ($1, $2, $3) RETURNING *",
-          [username, hash, permission_level]
+        // Insert the new engineer into the engineers table
+        const engineerResult = await db.query(
+          "INSERT INTO engineers (username, password, permission_level, upload_url, name, title) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+          [username, hash, permission_level, upload_url, name, title]
         );
 
-        if (result.rows.length > 0) {
-          res.status(201).json({ message: "Registration successful" }); // 201 Created
+        if (engineerResult.rows.length > 0) {
+          return res.status(201).json({ message: "Registration successful" }); // 201 Created
         } else {
-          res.status(500).json({ message: "Registration failed" });
+          return res.status(500).json({ message: "Registration failed" });
         }
       });
     } catch (err) {
@@ -624,7 +627,6 @@ app.get("/allEngineers", verifyToken, async (req, res) => {
     res.status(500).send("Error fetching engineers");
   }
 });
-
 // Update engineer
 app.put(
   "/engineers/:id",
@@ -632,12 +634,29 @@ app.put(
   checkPermissionLevel(2),
   async (req, res) => {
     const { id } = req.params;
-    const { name, title } = req.body;
+    const { name, title, username, password, permission_level, upload_url } =
+      req.body;
+    console.log("permission level", permission_level);
     try {
-      await db.query(
-        "UPDATE engineers SET name = $1, title = $2 WHERE engineer_id = $3",
-        [name, title, id]
-      );
+      // Base query with all fields except password
+      let query =
+        "UPDATE engineers SET name = $1, title = $2, username = $3, permission_level = $4, upload_url = $5";
+      const values = [name, title, username, permission_level, upload_url];
+
+      // Add password to the query if provided
+      if (password) {
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        query += ", password = $6";
+        values.push(hashedPassword);
+      }
+
+      // Add the WHERE clause with the id
+      query += " WHERE engineer_id = $" + (values.length + 1);
+      values.push(id);
+
+      // Execute the query
+      await db.query(query, values);
       res.sendStatus(200);
     } catch (error) {
       console.error("Error updating engineer:", error);
@@ -1597,9 +1616,10 @@ app.post("/loginMobile", async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    const result = await db.query("SELECT * FROM users WHERE username = $1", [
-      username,
-    ]);
+    const result = await db.query(
+      "SELECT * FROM engineers WHERE username = $1",
+      [username]
+    );
     if (result.rows.length > 0) {
       const user = result.rows[0];
       const storedHashedPassword = user.password;
