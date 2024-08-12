@@ -756,10 +756,10 @@ function Projects() {
                 <strong>Total Amount:</strong>
               </td>
               <td>{formatMoney(totalAmount)}</td>
-              <td colSpan="6" style={{ textAlign: "right" }}>
+              <td colSpan="5" style={{ textAlign: "right" }}>
                 <strong>Total</strong>
               </td>
-              <td colSpan="1" style={{ textAlign: "left" }}>
+              <td colSpan="2" style={{ textAlign: "left" }}>
                 {formatMoney(totalOverduePayments)}
               </td>
             </tr>
