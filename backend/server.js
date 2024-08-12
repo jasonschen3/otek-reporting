@@ -286,7 +286,6 @@ app.post("/expenses", verifyToken, async (req, res) => {
   const formattedYesterday = getFormattedDate(yesterday);
 
   let endDate = null;
-
   try {
     const endDateResult = await db.query(
       "SELECT TO_CHAR(end_date, 'YYYY-MM-DD') AS end_date FROM projects WHERE project_id = $1",
@@ -299,10 +298,10 @@ app.post("/expenses", verifyToken, async (req, res) => {
     console.error("Error fetching end date:", error);
     return res.status(500).send("Error fetching end date");
   }
-
+  console.log(projectId);
   let currExpensesInfo = null;
-
-  const baseQuery = `
+  try {
+    const baseQuery = `
     SELECT 
       e.expense_id, 
       p.project_name, 
@@ -319,41 +318,37 @@ app.post("/expenses", verifyToken, async (req, res) => {
       e.pdf_url 
     FROM 
       expenses e 
-    JOIN 
+    LEFT JOIN 
       projects p ON e.project_id = p.project_id 
-    JOIN 
+    LEFT JOIN 
       engineers en ON e.engineer_id = en.engineer_id 
     WHERE 
       e.project_id = $1 `;
 
-  if (action === "Yesterday") {
-    currExpensesInfo = await db.query(
-      baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_date",
-      [projectId, formattedYesterday]
-    );
-  } else if (action === "Today") {
-    currExpensesInfo = await db.query(
-      baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_date",
-      [projectId, formattedToday]
-    );
-  } else if (action === "View All") {
-    currExpensesInfo = await db.query(baseQuery + "ORDER BY e.expense_date", [
-      projectId,
-    ]);
-  } else if (action === "End Date" && endDate) {
-    currExpensesInfo = await db.query(
-      baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_date",
-      [projectId, endDate]
-    );
-  } else {
-    return res.status(400).send("Unknown action");
-  }
-
-  try {
+    if (action === "Yesterday") {
+      currExpensesInfo = await db.query(
+        baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_date",
+        [projectId, formattedYesterday]
+      );
+    } else if (action === "Today") {
+      currExpensesInfo = await db.query(
+        baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_date",
+        [projectId, formattedToday]
+      );
+    } else if (action === "View All") {
+      currExpensesInfo = await db.query(baseQuery + "ORDER BY e.expense_date", [
+        projectId,
+      ]);
+    } else if (action === "End Date" && endDate) {
+      currExpensesInfo = await db.query(
+        baseQuery + "AND e.expense_date = $2 ORDER BY e.expense_date",
+        [projectId, endDate]
+      );
+    }
+    console.log(currExpensesInfo.rows);
     res.json(currExpensesInfo.rows);
   } catch (error) {
-    console.error("Error fetching expenses:", error);
-    res.status(500).send("Error fetching expenses");
+    console.log("Error fetching expenses", error);
   }
 });
 
@@ -1651,6 +1646,20 @@ app.get("/projectsMobile", verifyToken, async (req, res) => {
   } catch (error) {
     console.error("Error fetching projects:", error);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get("/projectIdMobile", verifyToken, async (req, res) => {
+  const { projectName } = req.query;
+  try {
+    const projectId = await db.query(
+      `SELECT project_id
+       FROM projects WHERE project_name=$1`,
+      [projectName]
+    );
+    res.json(projectId.rows);
+  } catch (error) {
+    console.log("Error fetching id for mobile", error);
   }
 });
 
