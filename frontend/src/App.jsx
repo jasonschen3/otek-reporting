@@ -14,7 +14,6 @@ import Unauthorized from "./components/Unauthorized";
 import EditEngineers from "./components/EditEngineers";
 import Layout from "./components/Layout";
 import Notifications from "./components/Notifications";
-import AddEngineers from "./components/AddEngineers";
 import Invoices from "./components/Invoice";
 import AddInvoice from "./components/AddInvoice";
 import AddCompany from "./components/AddCompany";
@@ -37,7 +36,6 @@ function App() {
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/addExpense" element={<AddExpense />} />
           <Route path="/editEngineers" element={<EditEngineers />} />
-          <Route path="/addEngineers" element={<AddEngineers />} />
           <Route path="/manageEngineers" element={<ManageEngineers />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/invoices" element={<Invoices />} />

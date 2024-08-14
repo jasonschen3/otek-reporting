@@ -964,26 +964,6 @@ app.post(
   }
 );
 
-app.post(
-  "/addEngineer",
-  verifyToken,
-  checkPermissionLevel(2),
-  async (req, res) => {
-    const { name, title } = req.body;
-
-    try {
-      const result = await db.query(
-        "INSERT INTO engineers (name, title) VALUES ($1, $2) RETURNING *",
-        [name, title]
-      );
-      res.status(200).json(result.rows[0]);
-    } catch (err) {
-      console.error("Error adding engineer:", err);
-      res.status(500).json({ error: "Internal Server Error" });
-    }
-  }
-);
-
 // Delete
 app.post(
   "/deleteMarkedExpenses",
@@ -1620,6 +1600,7 @@ app.post("/loginMobile", async (req, res) => {
       "SELECT * FROM engineers WHERE username = $1",
       [username]
     );
+    const engineer_id = result.rows[0].engineer_id;
     if (result.rows.length > 0) {
       const user = result.rows[0];
       const storedHashedPassword = user.password;
@@ -1627,8 +1608,8 @@ app.post("/loginMobile", async (req, res) => {
       const valid = await comparePassword(password, storedHashedPassword);
       if (valid) {
         const token = generateMobileToken(user);
-        console.log("Valid ", token);
-        return res.status(200).json({ token });
+        console.log("Valid token generated:", token);
+        return res.status(200).json({ token, engineer_id });
       } else {
         return res.status(401).send("Invalid credentials");
       }
@@ -1680,6 +1661,24 @@ app.get("/projectIdMobile", verifyToken, async (req, res) => {
     res.json(projectId.rows);
   } catch (error) {
     console.log("Error fetching id for mobile", error);
+  }
+});
+
+app.get("/engineerUploadUrl", verifyToken, async (req, res) => {
+  const { engineer_id } = req.query;
+  try {
+    const result = await db.query(
+      "SELECT upload_url FROM engineers WHERE engineer_id = $1",
+      [engineer_id]
+    );
+    if (result.rows.length > 0) {
+      res.json(result.rows[0]);
+    } else {
+      res.status(404).json({ error: "Engineer not found" });
+    }
+  } catch (error) {
+    console.error("Error fetching upload URL:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
